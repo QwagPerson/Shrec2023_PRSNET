@@ -72,7 +72,6 @@ def transform_dataset(
     """
     for idx in range(start, end):
         transform_function(idx, data_path, output_path, param_dict)
-        fork_safe_print(worker_name, f"{idx} done!", print_lock)
 
 
 def create_folder_structure(voxel_dataset_root_path):

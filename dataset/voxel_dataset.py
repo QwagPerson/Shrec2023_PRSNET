@@ -36,7 +36,7 @@ class VoxelDataset(Dataset):
         assert os.path.exists(self.symmetry_planes_folder)
 
     def __len__(self):
-        return 1#len(os.listdir(self.points_folder))
+        return len(os.listdir(self.points_folder))
 
     def __getitem__(self, idx):
         # Read items
