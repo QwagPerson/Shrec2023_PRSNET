@@ -2,12 +2,13 @@ import os
 from multiprocessing import Process, Lock
 
 import torch
+import time
 from dotenv import load_dotenv
 from typing import List, Callable
 from dataset.simple_points_dataset import SimplePointsDataset
 from setup.setup_voxel_dataset.voxel import Voxel
 
-AMBIENTE = "local"
+AMBIENTE = "remote"
 ENV_PATH = f"envs/.{AMBIENTE}.env"
 
 
@@ -71,7 +72,10 @@ def transform_dataset(
     :return: None
     """
     for idx in range(start, end):
+        start = time.time()
         transform_function(idx, data_path, output_path, param_dict)
+        end = time.time()
+        fork_safe_print(worker_name=worker_name, msg=f"{idx} done! time spent: {end - start}", lock=print_lock)
 
 
 def create_folder_structure(voxel_dataset_root_path):
@@ -91,6 +95,7 @@ def create_voxel_dataset(
 ) -> None:
     dataset = SimplePointsDataset(data_path)
     points, symmetries = dataset[idx]
+
     voxel_obj = Voxel(
         pcd=points,
         sym_planes=symmetries,

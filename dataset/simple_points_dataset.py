@@ -24,6 +24,8 @@ def read_shrec2023_points(idx: int, data_path: str) -> (torch.tensor, torch.tens
     with open(os.path.join(data_path, f"points{idx}_sym.txt")) as f:
         sym_amount = int(f.readline().strip())
         sym_planes = torch.tensor(np.loadtxt(f))
+        if sym_amount == 1:
+            sym_planes = sym_planes.unsqueeze(0)
     return points, sym_planes
 
 
