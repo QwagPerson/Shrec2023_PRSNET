@@ -110,3 +110,4 @@ cython_debug/
 envs/.local.env
 envs/.remote.env
 *.ini
+lightning_logs
