@@ -8,7 +8,7 @@ from model.prsnet.lighting_prsnet import LightingPRSNet
 import lightning as L
 import torch
 
-dataset = VoxelDataset("/data/voxel_dataset")
+dataset = VoxelDataset("/data/gsanteli/voxel_dataset")
 
 L.seed_everything(42)
 generator = torch.Generator().manual_seed(42)
@@ -22,7 +22,7 @@ val_loader = DataLoader(val_dataset, collate_fn=dataset.collate_fn, num_workers=
 prsnet = LightingPRSNet(
     amount_of_heads=1,
     out_features=4,
-    reg_coef=25,
+    reg_coef=5,
 )
 
 # train model

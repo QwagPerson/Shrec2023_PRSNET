@@ -71,6 +71,8 @@ def phc(y_pred: torch.Tensor, y_true: torch.Tensor, theta=1.0, eps=1e-8):
 
     # Select only the first plane for every y_pred in B
     y_pred = y_pred[:, 0, :].unsqueeze(1)
+    #Handling devices
+    y_pred = y_pred.to(y_true.device)
     # Check if they match with any in y_true in B
     matches = match_planes(y_pred, y_true, theta, eps)
     # Return Match percent
