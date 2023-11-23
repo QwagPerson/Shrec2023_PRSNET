@@ -60,8 +60,6 @@ class SymLoss(nn.Module):
 
         # Calculate distance
         distance = torch.norm(reflected_sample - cp, dim=1)# * is_voxel_filled
-        if is_voxel_filled.max() == 0:
-            print("Reflected sample didnt have any point in a real voxel so the loss is zero.")
 
         return distance.mean()
 
