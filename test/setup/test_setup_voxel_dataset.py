@@ -3,7 +3,7 @@ import unittest
 import torch
 
 from dataset.voxel_dataset import VoxelDataset
-from setup.setup_voxel_dataset.voxel import Voxel, normalize_pcd
+from setup.setup_voxel_dataset.voxel import Voxel, compute_closest_points
 from model.prsnet.sym_loss import apply_symmetry
 from dotenv import load_dotenv
 
@@ -80,6 +80,19 @@ class TestVoxelClass(unittest.TestCase):
                 msg=f"reflected:\n{reflected_points}\n"
                     f"expected:\n{original_points}\n"
             )
+
+    def test_compute_cp(self):
+        test_pcd = torch.tensor([
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+        ])
+
+        cp_gotten = compute_closest_points(test_pcd, 2)
+        cp_expected = torch.zeros((2, 2, 2, 3))
+
+        cp_expected[1, :, :, :] = torch.tensor([1.0, 0.0, 0.0]).reshape((1,1,1,3)).repeat(1,2,2,1)
+        self.assertTrue(torch.equal(cp_gotten, cp_expected))
+
 
     def test_symmetries_between_points(self):
         points, voxel, cp, syms = self.dataset[0]
