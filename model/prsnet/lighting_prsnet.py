@@ -1,7 +1,7 @@
 import torch
 from model.prsnet.prs_net import PRSNet
 from model.prsnet.sym_loss import SymLoss
-from model.prsnet.metrics import phc
+from model.prsnet.metrics import phc, custom_loss
 import lightning as L
 
 
@@ -9,13 +9,13 @@ class LightingPRSNet(L.LightningModule):
     def __init__(self, amount_of_heads, out_features, reg_coef):
         super().__init__()
         self.net = PRSNet(amount_of_heads, out_features)
-        self.loss_fn = SymLoss(reg_coef)
+        self.loss_fn = custom_loss
         self.save_hyperparameters()
 
     def training_step(self, batch, batch_idx):
         sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids).double()
-        loss = self.loss_fn(y_pred, sample_points, voxel_grids, voxel_grids_cp, y_pred.device)
+        loss = self.loss_fn(y_pred, y_true)
         self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         # Transform y_pred : B x N x 4 to B x N x 7
         other_y_pred = torch.zeros((y_pred.shape[0], y_pred.shape[1], 7))
@@ -38,7 +38,7 @@ class LightingPRSNet(L.LightningModule):
     def test_step(self, batch, batch_idx):
         sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids).double()
-        loss = self.loss_fn(y_pred, sample_points, voxel_grids, voxel_grids_cp, y_pred.device)
+        loss = self.loss_fn(y_pred, y_true)
         # Transform y_pred : B x N x 4 to B x N x 7
         other_y_pred = torch.zeros((y_pred.shape[0], y_pred.shape[1], 7))
         # Copying normals
@@ -56,7 +56,7 @@ class LightingPRSNet(L.LightningModule):
     def validation_step(self, batch, batch_idx):
         sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids).double()
-        loss = self.loss_fn(y_pred, sample_points, voxel_grids, voxel_grids_cp, y_pred.device)
+        loss = self.loss_fn(y_pred, y_true)
         # Transform y_pred : B x N x 4 to B x N x 7
         other_y_pred = torch.zeros((y_pred.shape[0], y_pred.shape[1], 7))
         # Copying normals

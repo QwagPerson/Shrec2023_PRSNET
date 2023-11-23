@@ -31,6 +31,6 @@ trainer = L.Trainer(
     fast_dev_run=False,
     callbacks=[
         EarlyStopping(monitor="val_loss", mode="min")
-    ]
+    ],
 )
 trainer.fit(model=prsnet, train_dataloaders=train_loader, val_dataloaders=val_loader)
