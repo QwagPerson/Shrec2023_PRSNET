@@ -1,3 +1,5 @@
+import math
+
 import torch
 from model.prsnet.sym_loss import batch_dot
 
@@ -7,7 +9,7 @@ def get_angle(a, b):
 
     :param a: Shape B x N x 3
     :param b: Shape B x N x 3
-    :return: Shape B x N of angles between each vector
+    :return: Shape B x N of angles (in radians) between each vector
     """
     inner_product = torch.einsum('bnd,bnd->bn', a, b)
     a_norm = torch.linalg.norm(a, dim=2)
@@ -56,7 +58,7 @@ def match_planes(y_pred, y_true, theta, eps):
     return matches
 
 
-def phc(y_pred: torch.Tensor, y_true: torch.Tensor, theta=1.0, eps=1e-8):
+def phc(y_pred: torch.Tensor, y_true: torch.Tensor, theta=math.pi/180, eps=1e-8):
     """
 
     :param eps:
@@ -76,6 +78,8 @@ def phc(y_pred: torch.Tensor, y_true: torch.Tensor, theta=1.0, eps=1e-8):
     y_pred = y_pred.to(y_true.device)
     # Check if they match with any in y_true in B
     matches = match_planes(y_pred, y_true, theta, eps)
+    # Applying any through each prediction
+    matches = matches.any(dim=1)
     # Return Match percent
     return matches.sum().item() / torch.numel(matches)
 
