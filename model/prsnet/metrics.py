@@ -11,7 +11,7 @@ def get_angle(a, b):
     """
     inner_product = torch.einsum('bnd,bnd->bn', a, b)
     a_norm = torch.linalg.norm(a, dim=2)
-    b_norm = torch.linalg.norm(a, dim=2)
+    b_norm = torch.linalg.norm(b, dim=2)
     cos = inner_product / (a_norm * b_norm)
     cos = torch.clamp(cos, -1, 1)
     angle = torch.acos(cos)
