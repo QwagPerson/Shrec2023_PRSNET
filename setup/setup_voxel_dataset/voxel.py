@@ -99,12 +99,12 @@ class Voxel:
         ]
 
         self.point_voxels = self.classify(self.points)
-
         self.grid = self.get_grid(self.point_voxels)
         self.closest_point_grid = compute_closest_points(self.points, self.res)
 
-        self.grid_points = torch.cartesian_prod(*([torch.linspace(0.0, 1.0, steps=self.res + 1)] * 3))
-        self.grid_visualization_idx = self.calculate_idx()
+        self.grid_points = None
+        self.grid_visualization_idx = None
+
 
     def visualize_pcd(self):
         if self.env != "local":
@@ -134,22 +134,33 @@ class Voxel:
     def visualize_grid(self):
         if self.env != "local":
             raise Warning("Skipping visualization due not being on local environment.")
-        else:
-            ps.init()
-            ps.remove_all_structures()
-            ps.register_point_cloud("Points", self.points)
-            ps.register_surface_mesh("Voxelization", self.grid_points, self.grid_visualization_idx, smooth_shade=True)
-            for idx, sym_plane in enumerate(self.symmetries):
-                ps.register_surface_mesh(
-                    f"sym_plane_{idx}",
-                    sym_plane.coords,
-                    sym_plane.trianglesBase,
-                    smooth_shade=True
-                )
-            ps.show()
+            return
+
+        if self.grid_points is None:
+            self.grid_points = torch.cartesian_prod(*([torch.linspace(0.0, 1.0, steps=self.res + 1)] * 3))
+
+        if self.grid_visualization_idx is None:
+            self.grid_visualization_idx = self.calculate_idx()
+
+
+        ps.init()
+        ps.remove_all_structures()
+        ps.register_point_cloud("Points", self.points)
+        ps.register_surface_mesh("Voxelization", self.grid_points, self.grid_visualization_idx, smooth_shade=True)
+        for idx, sym_plane in enumerate(self.symmetries):
+            ps.register_surface_mesh(
+                f"sym_plane_{idx}",
+                sym_plane.coords,
+                sym_plane.trianglesBase,
+                smooth_shade=True
+            )
+        ps.show()
 
     def calculate_idx(self):
         """Calculate the index of the faces used in the voxel visualization."""
+        if self.grid_points is None:
+            self.grid_points = torch.cartesian_prod(*([torch.linspace(0.0, 1.0, steps=self.res + 1)] * 3))
+
         faces = []
         n = self.res + 1
         transform_idx = lambda a, b, c: int((n * n * a) + (n * b) + c) % len(self.grid_points)

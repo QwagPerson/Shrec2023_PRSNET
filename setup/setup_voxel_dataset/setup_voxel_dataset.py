@@ -2,14 +2,13 @@ import os
 from multiprocessing import Process, Lock
 
 import torch
+from torch.utils.data import random_split, Dataset
 import time
-from dotenv import load_dotenv
 from typing import List, Callable
+import argparse
+import pathlib
 from dataset.simple_points_dataset import SimplePointsDataset
 from setup.setup_voxel_dataset.voxel import Voxel
-
-AMBIENTE = "remote"
-ENV_PATH = f"envs/.{AMBIENTE}.env"
 
 
 def split_dataset(n_files: int, n_workers: int) -> List:
@@ -50,30 +49,26 @@ def fork_safe_print(worker_name: str, msg: str, lock: Lock) -> None:
 
 def transform_dataset(
         worker_name: str,
-        data_path: str,
         output_path: str,
-        transform_function: Callable[[int, str, str, dict], None],
+        transform_function: Callable[[int, torch.Tensor, torch.Tensor, str, dict], None],
         print_lock: Lock,
         param_dict: dict,
-        start: int,
-        end: int,
+        dataset: Dataset,
 ) -> None:
     """
     Apply a transformation to a part of the dataset applying the transformation
     function to each element between start and end.
     :param worker_name: ID of the worker. Necessary for safe prints.
-    :param data_path: Path leading to original data
     :param output_path: Path leading to output data
     :param transform_function: Function applied to read and transform the old data into new data
     :param print_lock: Helper lock to use safe prints
     :param param_dict: Dict used to pass kwargs to the transform function
-    :param start: Idx of the starting point in the dataset of the worker
-    :param end: Idx of the end point in the dataset for this worker
+    :param dataset: Torch dataset containing the points and symmetries.
     :return: None
     """
-    for idx in range(start, end):
+    for idx, (points, sym) in enumerate(dataset):
         start = time.time()
-        transform_function(idx, data_path, output_path, param_dict)
+        transform_function(idx, points, sym, output_path, param_dict)
         end = time.time()
         fork_safe_print(worker_name=worker_name, msg=f"{idx} done! time spent: {end - start}", lock=print_lock)
 
@@ -87,18 +82,23 @@ def create_folder_structure(voxel_dataset_root_path):
         )
 
 
+def print_about_dataset(VOXEL_DATASET_ROOT, args):
+    with open(os.path.join(VOXEL_DATASET_ROOT, "about.txt"), "w") as f:
+        f.write(
+            "About this dataset:\n" + str(args)
+        )
+
+
 def create_voxel_dataset(
         idx: int,
-        data_path: str,
+        points: torch.Tensor,
+        syms: torch.Tensor,
         output_path: str,
         param_dict: dict,
 ) -> None:
-    dataset = SimplePointsDataset(data_path)
-    points, symmetries = dataset[idx]
-
     voxel_obj = Voxel(
         pcd=points,
-        sym_planes=symmetries,
+        sym_planes=syms,
         env=param_dict["AMBIENTE"],
         resolution=param_dict["RESOLUTION"]
     )
@@ -109,16 +109,59 @@ def create_voxel_dataset(
     torch.save(voxel_obj.symmetries_tensor, os.path.join(output_path, f"symmetry_planes/symmetry_planes_{idx}.pt"))
 
 
-if __name__ == '__main__':
-    env = load_dotenv(ENV_PATH)
-    if not env:
-        raise ValueError(f"Failed to load env, path used is {ENV_PATH}")
+parser = argparse.ArgumentParser(description='Create a Voxel Dataset.')
+parser.add_argument('--env', choices=["remote", "local"],
+                    required=True, type=str,
+                    help="Enviroment used to execute this script. Visualizations are skipped in remote.")
 
-    ORIGINAL_DATASET_PATH = os.environ.get("ORIGINAL_DATASET_PATH")
-    ORIGINAL_DATASET_LENGTH = int(os.environ.get("ORIGINAL_DATASET_LENGTH"))
-    VOXEL_DATASET_ROOT = os.environ.get("VOXEL_DATASET_ROOT")
-    AMOUNT_OF_WORKERS = int(os.environ.get("AMOUNT_OF_WORKERS"))
-    RESOLUTION = int(os.environ.get("VOXEL_RESOLUTION"))
+parser.add_argument("--source_path",
+                    required=True, type=pathlib.Path,
+                    help="Path to original dataset.")
+
+parser.add_argument("--target_path",
+                    required=True, type=pathlib.Path,
+                    help="Path to original dataset.")
+
+parser.add_argument("--res",
+                    required=True, type=int,
+                    help="Voxel resolution used.")
+
+parser.add_argument("--n_workers",
+                    required=False, type=int,
+                    default=1,
+                    help="Amount of workers transforming the dataset.")
+
+parser.add_argument("--seed",
+                    required=False, type=int,
+                    default=0,
+                    help="Seed used.")
+
+parser.add_argument("--sample_size",
+                    required=False, type=float,
+                    help="Number between 0 and 1. Percentage of used data in transformation. Is random sampled.")
+
+parser.add_argument("--device",
+                    required=False, type=str,
+                    default="cpu",
+                    help="Device used for tensor computations.")
+
+if __name__ == '__main__':
+    args = vars(parser.parse_args())
+
+    AMBIENTE = args["env"]
+    ORIGINAL_DATASET_PATH = args["source_path"]
+    VOXEL_DATASET_ROOT = args["target_path"]
+    AMOUNT_OF_WORKERS = args["n_workers"]
+    RESOLUTION = args["res"]
+    PERCENTAGE_USED = args["sample_size"]
+    SEED = args["seed"]
+    DEVICE = args["device"]
+
+    torch.manual_seed(SEED)
+    dataset_generator = torch.Generator().manual_seed(SEED)
+
+    # This feels wrong
+    torch.set_default_device(DEVICE)
 
     if not os.path.exists(ORIGINAL_DATASET_PATH):
         raise FileNotFoundError("Original dataset not found.")
@@ -127,16 +170,25 @@ if __name__ == '__main__':
         raise FileExistsError(f"Root path for dataset already exists! Path used: {VOXEL_DATASET_ROOT}")
 
     create_folder_structure(VOXEL_DATASET_ROOT)
+    print_about_dataset(VOXEL_DATASET_ROOT, args)
 
     workers = []
-    splitted_dataset = split_dataset(ORIGINAL_DATASET_LENGTH, AMOUNT_OF_WORKERS)
+    original_dataset = SimplePointsDataset(ORIGINAL_DATASET_PATH)
+
+    sampled_dataset, _ = random_split(original_dataset,
+                                      lengths=[PERCENTAGE_USED, 1 - PERCENTAGE_USED],
+                                      generator=dataset_generator)
+
+    print("Sampled dataset size=", len(sampled_dataset))
+
+    splitted_dataset = random_split(sampled_dataset,
+                                    lengths=[1 / AMOUNT_OF_WORKERS for i in range(AMOUNT_OF_WORKERS)],
+                                    generator=dataset_generator)
 
     safe_print_lock = Lock()
     for i in range(AMOUNT_OF_WORKERS):
-        start_idx, end_idx = splitted_dataset[i]
         transform_dataset_kwargs = {
             "worker_name": f"worker_{i}",
-            "data_path": ORIGINAL_DATASET_PATH,
             "output_path": VOXEL_DATASET_ROOT,
             "transform_function": create_voxel_dataset,
             "print_lock": safe_print_lock,
@@ -144,8 +196,7 @@ if __name__ == '__main__':
                 "AMBIENTE": AMBIENTE,
                 "RESOLUTION": RESOLUTION,
             },
-            "start": start_idx,
-            "end": end_idx,
+            "dataset": splitted_dataset[i],
         }
 
         worker = Process(target=transform_dataset, kwargs=transform_dataset_kwargs)
