@@ -23,6 +23,7 @@ parser.add_argument("--n_workers", required=False, type=int,
 parser.add_argument("--input_res", type=int, required=True)
 parser.add_argument("--amount_of_heads", required=False, type=int, default=4)
 parser.add_argument("--out_features", required=False, type=int, default=4)
+parser.add_argument("--loss", required=True, type=str)
 parser.add_argument("--reg_coef", required=False, type=int, default=0)
 parser.add_argument("--patience", required=False, type=int, default=3)
 
@@ -38,6 +39,7 @@ if __name__ == "__main__":
     INPUT_RES = args["input_res"]
     N_HEADS = args["amount_of_heads"]
     OUT_FEATURES = args["out_features"]
+    LOSS_USED = args["loss"]
     REG_COEF = args["reg_coef"]
     PATIENCE = args["patience"]
 
@@ -45,7 +47,6 @@ if __name__ == "__main__":
 
     L.seed_everything(SEED)
     generator = torch.Generator().manual_seed(SEED)
-    print([TRAIN_VAL_SPLIT, 1 - TRAIN_VAL_SPLIT])
 
     proportions = [TRAIN_VAL_SPLIT, 1 - TRAIN_VAL_SPLIT]
     lengths = [int(p * len(dataset)) for p in proportions]
@@ -63,6 +64,7 @@ if __name__ == "__main__":
         input_resolution=INPUT_RES,
         amount_of_heads=N_HEADS,
         out_features=OUT_FEATURES,
+        loss_used=LOSS_USED,
         reg_coef=REG_COEF,
     )
 

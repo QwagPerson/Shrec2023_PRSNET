@@ -10,9 +10,9 @@ def batch_apply_symmetry(points: torch.Tensor, planes: torch.Tensor):
     :param planes: [B x 4]
     :return: [B x P x 3]
     """
-    normals = planes[:, 0:3] / torch.linalg.norm(planes[:, 0:3], dim=1)  # [B x 3]
+    normals = planes[:, 0:3] / torch.linalg.norm(planes[:, 0:3], dim=1).unsqueeze(1)  # [B x 3]
     offsets = planes[:, 3]  # [B]
-    distances_to_planes = torch.einsum("bd, bnd -> bn", normals, points) + offsets  # [B x P]
+    distances_to_planes = torch.einsum("bd, bnd -> bn", normals, points) + offsets.unsqueeze(1)  # [B x P]
     return points - 2 * torch.einsum('bp, bd-> bpd', distances_to_planes, normals)
 
 
@@ -55,14 +55,17 @@ class ChamferLoss(nn.Module):
         return reflexion_loss + self.reg_coef * regularization_loss.sum()
 
 
-# Make into a unit test.
-"""if __name__ == "__main__":
+"""# Make into a unit test.
+if __name__ == "__main__":
     from dataset.simple_points_dataset import SimplePointsDataset
+    from dataset.voxel_dataset import VoxelDataset
 
     points, syms = SimplePointsDataset("/data/shrec_2023/benchmark-train")[0]
+    points, voxel, cp, syms = VoxelDataset("/data/voxel_dataset")[0]
     points, syms = points.float(), syms.float()
     syms_plane = syms[:, 0:4]
     syms_plane[:, 3] = - torch.einsum("bd, bd -> b", syms[:, 0:3], syms[:, 3::])
     loss = ChamferLoss(0)
     result = loss.forward(syms_plane.unsqueeze(0), points.unsqueeze(0), None, None, "cpu")
-    print(result)"""
+    print(result)
+"""
