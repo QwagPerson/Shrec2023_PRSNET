@@ -1,41 +1,71 @@
-import os
+import pathlib
 
-from lightning.pytorch.callbacks import EarlyStopping
-
-from dataset.voxel_dataset import VoxelDataset
-from torch.utils.data import DataLoader, random_split
-from model.prsnet.lighting_prsnet import LightingPRSNet
 import lightning as L
 import torch
 
-dataset = VoxelDataset("/data/gsanteli/voxel_dataset")
+from lightning.pytorch.callbacks import EarlyStopping
+from argparse import ArgumentParser
+from dataset.voxel_dataset import VoxelDataset
+from torch.utils.data import DataLoader, random_split
 
+from model.prsnet.lighting_prsnet import LightingPRSNet
 
+parser = ArgumentParser()
 
+parser.add_argument("--experiment_name", type=str, required=True)
+parser.add_argument("--data_path", type=pathlib.Path, required=True)
+parser.add_argument("--batch_size", type=int, default=16)
+parser.add_argument("--seed", required=False, type=int, default=0, help="Seed used.")
+parser.add_argument("--train_val_split", required=False, default=0.9, type=float)
+parser.add_argument("--n_workers", required=False, type=int,
+                    default=1, help="Amount of workers transforming the dataset.")
 
+parser.add_argument("--input_res", type=int, required=True)
+parser.add_argument("--amount_of_heads", required=False, type=int, default=4)
+parser.add_argument("--out_features", required=False, type=int, default=4)
+parser.add_argument("--reg_coef", required=False, type=int, default=0)
+parser.add_argument("--patience", required=False, type=int, default=3)
 
+if __name__ == "__main__":
+    args = vars(parser.parse_args())
 
-L.seed_everything(42)
-generator = torch.Generator().manual_seed(42)
+    NAME = args["experiment_name"]
+    DATA_PATH = args["data_path"]
+    BATCH_SIZE = args["batch_size"]
+    SEED = args["seed"]
+    TRAIN_VAL_SPLIT = args["train_val_split"]
+    N_WORKERS = args["n_workers"]
+    INPUT_RES = args["input_res"]
+    N_HEADS = args["amount_of_heads"]
+    OUT_FEATURES = args["out_features"]
+    REG_COEF = args["reg_coef"]
+    PATIENCE = args["patience"]
 
-train_dataset, val_dataset = random_split(dataset, [0.9, 0.1], generator=generator)
+    dataset = VoxelDataset(DATA_PATH)
 
-train_loader = DataLoader(train_dataset, collate_fn=dataset.collate_fn, num_workers=3)
-val_loader = DataLoader(val_dataset, collate_fn=dataset.collate_fn, num_workers=3)
+    L.seed_everything(SEED)
+    generator = torch.Generator().manual_seed(SEED)
 
-# model
-prsnet = LightingPRSNet(
-    amount_of_heads=1,
-    out_features=4,
-    reg_coef=5,
-)
+    train_dataset, val_dataset = random_split(dataset, [TRAIN_VAL_SPLIT, 1 - TRAIN_VAL_SPLIT], generator=generator)
 
-# train model
-trainer = L.Trainer(
-    enable_checkpointing=True,
-    fast_dev_run=False,
-    callbacks=[
-        EarlyStopping(monitor="val_loss", mode="min")
-    ],
-)
-trainer.fit(model=prsnet, train_dataloaders=train_loader, val_dataloaders=val_loader)
+    train_loader = DataLoader(train_dataset, collate_fn=dataset.collate_fn, num_workers=N_WORKERS,
+                              batch_size=BATCH_SIZE)
+    val_loader = DataLoader(val_dataset, collate_fn=dataset.collate_fn, num_workers=N_WORKERS, batch_size=BATCH_SIZE)
+
+    lighting_model = LightingPRSNet(
+        name=NAME,
+        batch_size=BATCH_SIZE,
+        input_resolution=INPUT_RES,
+        amount_of_heads=N_HEADS,
+        out_features=OUT_FEATURES,
+        reg_coef=REG_COEF,
+    )
+
+    trainer = L.Trainer(
+        enable_checkpointing=True,
+        callbacks=[
+            EarlyStopping(monitor="val_loss", mode="min", patience=PATIENCE)
+        ],
+    )
+
+    trainer.fit(model=lighting_model, train_dataloaders=train_loader, val_dataloaders=val_loader)

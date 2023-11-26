@@ -1,6 +1,6 @@
 import os
 from multiprocessing import Process, Lock
-
+import torch.multiprocessing as mp
 import torch
 from torch.utils.data import random_split, Dataset
 import time
@@ -157,11 +157,14 @@ if __name__ == '__main__':
     SEED = args["seed"]
     DEVICE = args["device"]
 
-    torch.manual_seed(SEED)
-    dataset_generator = torch.Generator().manual_seed(SEED)
-
     # This feels wrong
     torch.set_default_device(DEVICE)
+
+    torch.manual_seed(SEED)
+    dataset_generator = torch.Generator(device=DEVICE).manual_seed(SEED)
+
+    # Changing how child process are spawned
+    mp.set_start_method('spawn')
 
     if not os.path.exists(ORIGINAL_DATASET_PATH):
         raise FileNotFoundError("Original dataset not found.")

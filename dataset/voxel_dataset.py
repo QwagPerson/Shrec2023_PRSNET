@@ -52,6 +52,6 @@ class VoxelDataset(Dataset):
         else:
             sample = points
 
-        return sample, voxel_grid, voxel_grid_cp, sym_planes
+        return sample.float(), voxel_grid.float(), voxel_grid_cp.float(), sym_planes.float()
 
 
