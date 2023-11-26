@@ -45,8 +45,13 @@ if __name__ == "__main__":
 
     L.seed_everything(SEED)
     generator = torch.Generator().manual_seed(SEED)
+    print([TRAIN_VAL_SPLIT, 1 - TRAIN_VAL_SPLIT])
 
-    train_dataset, val_dataset = random_split(dataset, [TRAIN_VAL_SPLIT, 1 - TRAIN_VAL_SPLIT], generator=generator)
+    proportions = [TRAIN_VAL_SPLIT, 1 - TRAIN_VAL_SPLIT]
+    lengths = [int(p * len(dataset)) for p in proportions]
+    lengths[-1] = len(dataset) - sum(lengths[:-1])
+
+    train_dataset, val_dataset = random_split(dataset, lengths, generator=generator)
 
     train_loader = DataLoader(train_dataset, collate_fn=dataset.collate_fn, num_workers=N_WORKERS,
                               batch_size=BATCH_SIZE)

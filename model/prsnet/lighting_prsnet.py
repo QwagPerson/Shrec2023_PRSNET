@@ -1,6 +1,7 @@
 import torch
 from model.prsnet.prs_net import PRSNet
 from model.prsnet.sym_loss import SymLoss
+from model.prsnet.chamfer_loss import  ChamferLoss
 from model.prsnet.metrics import phc, custom_loss
 import lightning as L
 
@@ -32,7 +33,7 @@ class LightingPRSNet(L.LightningModule):
         super().__init__()
         self.name = name
         self.net = PRSNet(input_resolution, amount_of_heads, out_features)
-        self.loss_fn = SymLoss(reg_coef)
+        self.loss_fn = ChamferLoss(reg_coef)
         self.batch_size_used = batch_size
         self.save_hyperparameters(ignore=["net", "loss_fn"])
 
