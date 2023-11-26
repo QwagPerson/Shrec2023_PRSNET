@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from pytorch3d.loss import chamfer_distance
+from chamferdist import ChamferDistance
 
 
 def batch_apply_symmetry(points: torch.Tensor, planes: torch.Tensor):
@@ -19,6 +19,7 @@ def batch_apply_symmetry(points: torch.Tensor, planes: torch.Tensor):
 class ChamferLoss(nn.Module):
     def __init__(self, reg_coef):
         super(ChamferLoss, self).__init__()
+        self.distance = ChamferDistance()
         self.reg_coef = reg_coef
 
     @staticmethod
@@ -47,15 +48,18 @@ class ChamferLoss(nn.Module):
         for current_head_idx in range(amount_of_heads):
             predicted_planes_by_head = predicted_planes[:, current_head_idx, :]
             reflected_points = batch_apply_symmetry(sample_points, predicted_planes_by_head)
-            reflexion_loss += chamfer_distance(sample_points, reflected_points)[0]
+            reflexion_loss += self.distance(
+                sample_points, reflected_points,
+                batch_reduction="mean", point_reduction="mean")
 
         return reflexion_loss + self.reg_coef * regularization_loss.sum()
+
 
 # Make into a unit test.
 """if __name__ == "__main__":
     from dataset.simple_points_dataset import SimplePointsDataset
 
-    points, syms = SimplePointsDataset("/data/shrec_2023/benchmark-train")[2]
+    points, syms = SimplePointsDataset("/data/shrec_2023/benchmark-train")[0]
     points, syms = points.float(), syms.float()
     syms_plane = syms[:, 0:4]
     syms_plane[:, 3] = - torch.einsum("bd, bd -> b", syms[:, 0:3], syms[:, 3::])
