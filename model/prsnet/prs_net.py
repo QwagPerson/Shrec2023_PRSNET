@@ -5,9 +5,8 @@ from torch import nn
 
 
 class PRSNet(nn.Module):
-    def __init__(self, input_resolution, amount_of_heads, out_features=4):
+    def __init__(self, input_resolution, amount_of_heads, out_features=4, use_bn=True):
         super().__init__()
-
         if not (amount_of_heads > 0 and isinstance(amount_of_heads, int)):
             raise ValueError("Amount of heads should be a positive integer.")
 
@@ -17,11 +16,16 @@ class PRSNet(nn.Module):
         out_channels = 4
 
         for i in range(n_conv_layers):
-            conv_layers += [
+            conv_layer = [
                 nn.Conv3d(in_channels, out_channels, 3, stride=1, padding=1),
                 nn.MaxPool3d(2, stride=2),
                 nn.LeakyReLU(),
             ]
+
+            if use_bn and i != n_conv_layers-1:
+                conv_layer.append(nn.BatchNorm3d(out_channels))
+
+            conv_layers += conv_layer
             in_channels = out_channels
             out_channels = out_channels * 2
 
@@ -30,7 +34,9 @@ class PRSNet(nn.Module):
         self.heads = nn.ModuleList([])
         for i in range(amount_of_heads):
             self.heads.append(nn.Sequential(
-                nn.Linear(in_channels, 32),
+                nn.Linear(in_channels, 64),
+                nn.LeakyReLU(),
+                nn.Linear(64, 32),
                 nn.LeakyReLU(),
                 nn.Linear(32, 16),
                 nn.LeakyReLU(),

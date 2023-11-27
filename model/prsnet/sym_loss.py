@@ -78,11 +78,11 @@ class SymLoss(nn.Module):
             sample_points,  # tensor of shape [BxNx3]
             voxel_grids,  # tensor of shape [Bx1xRxRxR]
             cp_grids,  # tensor of shape [BxRxRxRx3]
-            device,
     ):
         batch_size = predicted_planes.shape[0]
         amount_of_heads = predicted_planes.shape[1]
         res = cp_grids.shape[1]
+        device = predicted_planes.device
 
         # First regularization loss
         regularization_loss = self.planar_reflective_sym_reg_loss(predicted_planes).to(device)

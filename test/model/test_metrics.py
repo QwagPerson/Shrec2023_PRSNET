@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from model.prsnet.metrics import phc
+from model.prsnet.metrics import get_phc
 
 
 class TestMetrics(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestMetrics(unittest.TestCase):
         mock_y_test = torch.ones((10, 8, 6))
 
         # Output is B a mask of true and false
-        phc_return = phc(mock_y_pred, mock_y_test)
+        phc_return = get_phc(mock_y_pred, mock_y_test)
 
         self.assertEqual(phc_return, 1)
 
@@ -29,7 +29,7 @@ class TestMetrics(unittest.TestCase):
             ]
         ])
 
-        phc_return = phc(mock_y_pred, mock_y_test)
+        phc_return = get_phc(mock_y_pred, mock_y_test)
 
         self.assertEqual(phc_return, 1)
 
@@ -46,7 +46,7 @@ class TestMetrics(unittest.TestCase):
             ]
         ])
 
-        phc_return = phc(mock_y_pred, mock_y_test)
+        phc_return = get_phc(mock_y_pred, mock_y_test)
 
         self.assertEqual(phc_return, 0)
 
@@ -68,7 +68,7 @@ class TestMetrics(unittest.TestCase):
             ]
         ])
 
-        phc_return = phc(mock_y_pred, mock_y_test)
+        phc_return = get_phc(mock_y_pred, mock_y_test)
 
         self.assertEqual(phc_return, 0.5)
 
@@ -85,6 +85,6 @@ class TestMetrics(unittest.TestCase):
             ]
         ])
 
-        phc_return = phc(mock_y_pred, mock_y_test)
+        phc_return = get_phc(mock_y_pred, mock_y_test)
 
         self.assertEqual(phc_return, 1)

@@ -46,7 +46,7 @@ class VoxelDataset(Dataset):
                                                 f"closest_point_voxel_grid_{idx}.pt"))
         sym_planes = torch.load(os.path.join(self.symmetry_planes_folder, f"symmetry_planes_{idx}.pt"))
 
-        if self.sample_size is not None:
+        if self.sample_size != -1:
             p_idx = torch.randperm(self.sample_size) % points.shape[0]
             sample = points[p_idx]
         else:

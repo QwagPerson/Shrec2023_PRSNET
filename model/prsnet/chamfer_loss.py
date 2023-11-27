@@ -37,9 +37,9 @@ class ChamferLoss(nn.Module):
             sample_points,  # tensor of shape [BxNx3]
             voxel_grids,  # tensor of shape [Bx1xRxRxR]
             cp_grids,  # tensor of shape [BxRxRxRx3]
-            device,
     ):
         amount_of_heads = predicted_planes.shape[1]
+        device = predicted_planes.device
 
         # First regularization loss
         regularization_loss = self.planar_reflective_sym_reg_loss(predicted_planes).to(device)
@@ -50,22 +50,18 @@ class ChamferLoss(nn.Module):
             reflected_points = batch_apply_symmetry(sample_points, predicted_planes_by_head)
             reflexion_loss += self.distance(
                 sample_points, reflected_points,
-                batch_reduction="mean", point_reduction="mean")
+                batch_reduction="mean", point_reduction="mean",
+                bidirectional=True)
 
         return reflexion_loss + self.reg_coef * regularization_loss.sum()
 
 
-"""# Make into a unit test.
+# Make into a unit test.
 if __name__ == "__main__":
-    from dataset.simple_points_dataset import SimplePointsDataset
     from dataset.voxel_dataset import VoxelDataset
-
-    points, syms = SimplePointsDataset("/data/shrec_2023/benchmark-train")[0]
-    points, voxel, cp, syms = VoxelDataset("/data/voxel_dataset")[0]
-    points, syms = points.float(), syms.float()
+    points, voxel, cp, syms = VoxelDataset("/data/voxel_dataset", sample_size=-1)[0]
     syms_plane = syms[:, 0:4]
     syms_plane[:, 3] = - torch.einsum("bd, bd -> b", syms[:, 0:3], syms[:, 3::])
     loss = ChamferLoss(0)
     result = loss.forward(syms_plane.unsqueeze(0), points.unsqueeze(0), None, None, "cpu")
     print(result)
-"""
