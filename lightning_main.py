@@ -84,7 +84,9 @@ if __name__ == "__main__":
             EarlyStopping(monitor="train_loss", mode="min", patience=PATIENCE)
         ],
         default_root_dir=os.path.join(os.getcwd(), LOG_FOLDER),
-        fast_dev_run=False
+        fast_dev_run=False,
+        accelerator="gpu",
+        devices=[1]
     )
 
     trainer.fit(model=lighting_model, train_dataloaders=train_loader, val_dataloaders=val_loader)

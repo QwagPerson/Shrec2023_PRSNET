@@ -46,7 +46,7 @@ class SymLoss(nn.Module):
         voxel_per_point[:, 1] = reflected_sample[:, 1] // voxel_length
         voxel_per_point[:, 2] = reflected_sample[:, 2] // voxel_length
 
-        voxel_per_point = voxel_per_point.clamp(0, res - 1).int()
+        voxel_per_point = voxel_per_point.clamp(0, res - 1).long()
 
         # Split into x,y,z the index to be able to use it to filter
         # the grid

@@ -69,7 +69,7 @@ class SymmetryPlane:
         # The plane is determined by a normal vector and a point
         self.point = point.astype(np.float32)
         self.normal = normal
-        self.normal = self.normal / np.linalg.norm(self.normal)
+        self.normal = self.normal / (np.linalg.norm(self.normal) + 1e-5)
 
         self.compute_geometry()
 
@@ -93,7 +93,7 @@ class SymmetryPlane:
     # Transforms the canonical plane to be oriented wrt the normal
     def compute_geometry(self):
         # Be sure the vector is normal
-        self.normal = self.normal / np.linalg.norm(self.normal)
+        self.normal = self.normal / (np.linalg.norm(self.normal) + 1e-6)
         # print(f'First normal: {self.normal}')
         a, b, c = self.normal
 
