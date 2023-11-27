@@ -111,3 +111,4 @@ envs/.local.env
 envs/.remote.env
 *.ini
 lightning_logs
+modelos_interesantes
