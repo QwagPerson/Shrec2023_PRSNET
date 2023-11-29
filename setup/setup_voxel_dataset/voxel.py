@@ -179,9 +179,9 @@ class Voxel:
 
         voxel_length = (1.0 / self.res)
 
-        voxel_per_point[:, 0] = pcd[:, 0] // voxel_length
-        voxel_per_point[:, 1] = pcd[:, 1] // voxel_length
-        voxel_per_point[:, 2] = pcd[:, 2] // voxel_length
+        voxel_per_point[:, 0] = torch.div(pcd[:, 0], voxel_length, rounding_mode='floor')
+        voxel_per_point[:, 1] = torch.div(pcd[:, 1], voxel_length, rounding_mode='floor')
+        voxel_per_point[:, 2] = torch.div(pcd[:, 2], voxel_length, rounding_mode='floor')
 
         # Handle edge case where there are points on the edge of the voxelization i.e idx == self.res
         voxel_per_point[voxel_per_point == self.res] = self.res - 1

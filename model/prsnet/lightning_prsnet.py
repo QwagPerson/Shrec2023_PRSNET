@@ -1,7 +1,6 @@
 import torch
 from model.prsnet.prs_net import PRSNet
-from model.prsnet.sym_loss import SymLoss
-from model.prsnet.chamfer_loss import ChamferLoss
+from model.prsnet.losses import SymLoss, ChamferLoss
 from model.prsnet.metrics import get_phc, custom_loss
 import lightning as L
 import math
@@ -34,8 +33,8 @@ class LightingPRSNet(L.LightningModule):
     def training_step(self, batch, batch_idx):
         sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids)
-        # B x H x 4 : Normalizacion
-        # Normalizer las normales de y_pred
+        # Normalizing normal of planes
+        y_pred[:, :, 0:3] = y_pred[:, 0:3] / torch.linalg.norm(y_pred[:, 0:3], dim=1).unsqueeze(1)
         loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
         train_phc = get_phc(batch, y_pred)
         self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
@@ -66,3 +65,8 @@ class LightingPRSNet(L.LightningModule):
 
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("val_phc", val_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+
+    def predict_step(self, batch, batch_idx, dataloader_idx=0):
+        sample_points, voxel_grids, voxel_grids_cp, y_true = batch
+        y_pred = self.net.forward(voxel_grids)
+        return y_pred

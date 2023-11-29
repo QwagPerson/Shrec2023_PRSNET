@@ -138,6 +138,7 @@ parser.add_argument("--seed",
 
 parser.add_argument("--sample_size",
                     required=False, type=float,
+                    default=1.0,
                     help="Number between 0 and 1. Percentage of used data in transformation. Is random sampled.")
 
 parser.add_argument("--device",
@@ -157,9 +158,6 @@ if __name__ == '__main__':
     SEED = args["seed"]
     DEVICE = args["device"]
 
-    # This feels wrong
-    torch.set_default_device(DEVICE)
-
     torch.manual_seed(SEED)
     dataset_generator = torch.Generator(device=DEVICE).manual_seed(SEED)
 
@@ -178,14 +176,23 @@ if __name__ == '__main__':
     workers = []
     original_dataset = SimplePointsDataset(ORIGINAL_DATASET_PATH)
 
+    proportions = [PERCENTAGE_USED, 1 - PERCENTAGE_USED]
+    lengths = [int(p * len(original_dataset)) for p in proportions]
+    lengths[-1] = len(original_dataset) - sum(lengths[:-1])
+
     sampled_dataset, _ = random_split(original_dataset,
-                                      lengths=[PERCENTAGE_USED, 1 - PERCENTAGE_USED],
+                                      lengths=lengths,
                                       generator=dataset_generator)
 
     print("Sampled dataset size=", len(sampled_dataset))
 
+
+
+    proportions = [1 / AMOUNT_OF_WORKERS for i in range(AMOUNT_OF_WORKERS)]
+    lengths = [int(p * len(original_dataset)) for p in proportions]
+    lengths[-1] = len(original_dataset) - sum(lengths[:-1])
     splitted_dataset = random_split(sampled_dataset,
-                                    lengths=[1 / AMOUNT_OF_WORKERS for i in range(AMOUNT_OF_WORKERS)],
+                                    lengths=lengths,
                                     generator=dataset_generator)
 
     safe_print_lock = Lock()
