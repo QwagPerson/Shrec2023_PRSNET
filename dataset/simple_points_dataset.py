@@ -38,4 +38,4 @@ class SimplePointsDataset(Dataset):
 
     def __getitem__(self, idx):
         points, syms = read_shrec2023_points(idx, self.data_dir)
-        return points, syms
+        return idx, points, syms

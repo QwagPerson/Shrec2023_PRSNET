@@ -44,11 +44,13 @@ if __name__ == "__main__":
     model = LightingPRSNet.load_from_checkpoint(MODEL_PATH)
 
     dataset = VoxelDataset(DATA_PATH, sample_size=model.sample_size)
-    if len(dataset) != 9000:
-        print(len(dataset))
-        raise Exception
+    print(len(dataset))
+
     dataloader = DataLoader(dataset, collate_fn=dataset.collate_fn, num_workers=N_WORKERS, batch_size=1, shuffle=False)
 
-    trainer = Trainer()
+    trainer = Trainer(
+        accelerator="gpu",
+        devices=[1]
+    )
     predictions = trainer.predict(model, dataloader)
     save_predictions(predictions, OUTPUT_PATH)

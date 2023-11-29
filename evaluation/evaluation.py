@@ -2,6 +2,7 @@ import argparse
 import glob
 import os
 import numpy as np
+from tqdm import tqdm
 
 
 # Stores the information of a symmetry plane
@@ -180,14 +181,14 @@ if __name__ == "__main__":
         input_list = glob.glob(os.path.join(opt.input_folder, '*_res.txt'))
 
         if len(input_list) != 9000:
-            print(f"The folder with results is incomplete: {len(input_list)}/9000")
+            print(f"The input folder with results is incomplete: {len(input_list)}/9000")
             # exit()
 
         gr_list = glob.glob(os.path.join(opt.groundtruth, '*_sym.txt'))
 
         if len(gr_list) != 9000:
-            print(f"The folder with results is incomplete: {len(gr_list)}/9000")
-            exit()
+            print(f"The groundtruth folder with results is incomplete: {len(gr_list)}/9000")
+            # exit()
     else:
         set_file = os.path.join(opt.groundtruth, opt.set + ".txt")
         if not os.path.exists(set_file):
@@ -203,16 +204,22 @@ if __name__ == "__main__":
     value = opt.bins
     pr = [0.0 for i in range(value + 1)]
 
-    for inputRes in input_list:
-        resultModel = computeMetricsPerModel(inputRes, opt.bins, opt)
+    print(len(input_list))
+    aa = 0
+    for inputRes in tqdm(input_list):
+        try:
+            resultModel = computeMetricsPerModel(inputRes, opt.bins, opt)
 
-        pr = [pr[i] + resultModel["pr"][i] for i in range(value + 1)]
-        MAP = MAP + resultModel["MAP"]
-        NN = NN + resultModel["NN"]
+            pr = [pr[i] + resultModel["pr"][i] for i in range(value + 1)]
+            MAP = MAP + resultModel["MAP"]
+            NN = NN + resultModel["NN"]
+            aa += 1
+        except KeyboardInterrupt:
+            break
 
-    pr = [pr[i] / len(input_list) for i in range(value + 1)]
-    MAP = MAP / len(input_list)
-    NN = NN / len(input_list)
+    pr = [pr[i] / aa for i in range(value + 1)]
+    MAP = MAP / aa
+    NN = NN / aa
 
     for x in pr:
         print(str(x).replace(".", ","))
@@ -220,21 +227,3 @@ if __name__ == "__main__":
     print()
     print('MAP:', str(MAP).replace(".", ","))
     print('PHC:', str(NN).replace(".", ","))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
