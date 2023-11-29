@@ -53,4 +53,6 @@ if __name__ == "__main__":
         devices=[1]
     )
     predictions = trainer.predict(model, dataloader)
-    save_predictions(predictions, OUTPUT_PATH)
+
+    print(predictions)
+    #save_predictions(predictions, OUTPUT_PATH)

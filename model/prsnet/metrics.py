@@ -105,7 +105,7 @@ def get_phc(batch, y_pred: torch.Tensor, theta=1, eps_percent=0.01):
     :return: % of matches float 0..1
     """
     # Get eps
-    sample_points, voxel_grids, voxel_grids_cp, y_true = batch
+    idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
     y_pred = y_pred.detach().clone().to(y_true.device)
     eps = get_diagonals_length(sample_points) * eps_percent
     # Normalize y_pred

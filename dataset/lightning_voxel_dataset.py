@@ -4,7 +4,7 @@ import lightning as L
 import torch
 
 from torch.utils.data import random_split, DataLoader
-from dataset.voxel_dataset import VoxelDataset
+from dataset.voxel_dataset import VoxelDataset, collate_fn
 
 
 class VoxelDataModule(L.LightningDataModule):
@@ -54,7 +54,7 @@ class VoxelDataModule(L.LightningDataModule):
     def train_dataloader(self):
         return DataLoader(
             self.voxel_train,
-            collate_fn=self.voxel_train.collate_fn,
+            collate_fn=collate_fn,
             batch_size=self.batch_size,
             shuffle=self.shuffle,
             num_workers=self.n_workers,
@@ -64,19 +64,17 @@ class VoxelDataModule(L.LightningDataModule):
     def val_dataloader(self):
         return DataLoader(
             self.voxel_val,
-            collate_fn=self.voxel_train.collate_fn,
+            collate_fn=collate_fn,
             batch_size=self.batch_size,
-            shuffle=self.shuffle,
+            shuffle=False,
             num_workers=self.n_workers,
-            generator=torch.Generator().manual_seed(self.seed)
         )
 
     def test_dataloader(self):
         return DataLoader(
             self.voxel_test,
-            collate_fn=self.voxel_train.collate_fn,
+            collate_fn=collate_fn,
             batch_size=self.batch_size,
-            shuffle=self.shuffle,
+            shuffle=False,
             num_workers=self.n_workers,
-            generator=torch.Generator().manual_seed(self.seed)
         )

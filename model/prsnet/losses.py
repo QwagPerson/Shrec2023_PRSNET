@@ -123,9 +123,9 @@ class SymLoss(nn.Module):
         voxel_per_point = torch.zeros_like(reflected_sample)
         voxel_length = 1.0 / res
 
-        voxel_per_point[:, 0] = reflected_sample[:, 0] // voxel_length
-        voxel_per_point[:, 1] = reflected_sample[:, 1] // voxel_length
-        voxel_per_point[:, 2] = reflected_sample[:, 2] // voxel_length
+        voxel_per_point[:, 0] = torch.div(reflected_sample[:, 0], voxel_length, rounding_mode='floor')
+        voxel_per_point[:, 1] = torch.div(reflected_sample[:, 1], voxel_length, rounding_mode='floor')
+        voxel_per_point[:, 2] = torch.div(reflected_sample[:, 2], voxel_length, rounding_mode='floor')
 
         voxel_per_point = voxel_per_point.clamp(0, res - 1).long()
 

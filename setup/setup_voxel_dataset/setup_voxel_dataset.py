@@ -208,18 +208,28 @@ if __name__ == '__main__':
     lengths = [int(p * len(original_dataset)) for p in proportions]
     lengths[-1] = len(original_dataset) - sum(lengths[:-1])
 
-    sampled_dataset, _ = random_split(original_dataset,
-                                      lengths=lengths,
-                                      generator=dataset_generator)
+    sampled_dataset = torch.utils.data.Subset(
+        original_dataset,
+        range(int(PERCENTAGE_USED * len(original_dataset)))
+    )
 
     print("Sampled dataset size=", len(sampled_dataset))
 
     proportions = [1 / AMOUNT_OF_WORKERS for i in range(AMOUNT_OF_WORKERS)]
-    lengths = [int(p * len(original_dataset)) for p in proportions]
-    lengths[-1] = len(original_dataset) - sum(lengths[:-1])
-    splitted_dataset = random_split(sampled_dataset,
-                                    lengths=lengths,
-                                    generator=dataset_generator)
+    lengths = [int(p * len(sampled_dataset)) for p in proportions]
+    lengths[-1] = len(sampled_dataset) - sum(lengths[:-1])
+
+
+    splitted_datasets = []
+    init_idx = 0
+    for delta in lengths:
+        splitted_datasets.append(
+            torch.utils.data.Subset(
+                original_dataset,
+                range(init_idx, init_idx+delta)
+            )
+        )
+        init_idx+=delta
 
     safe_print_lock = Lock()
     for i in range(AMOUNT_OF_WORKERS):
@@ -232,7 +242,7 @@ if __name__ == '__main__':
                 "AMBIENTE": AMBIENTE,
                 "RESOLUTION": RESOLUTION,
             },
-            "dataset": splitted_dataset[i],
+            "dataset": splitted_datasets[i],
         }
 
         worker = Process(target=transform_dataset, kwargs=transform_dataset_kwargs)

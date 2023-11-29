@@ -49,13 +49,4 @@ class PRSNet(nn.Module):
         results = []
         for head in self.heads:
             results.append(head(x))
-        result = torch.stack(results, dim=1)
-
-        # Normalizing normal of planes
-
-        normals = result[:, :, 0:3]  # B x N x 3
-        norms = torch.linalg.norm(normals, dim=2)  # B x N
-        norms = norms.unsqueeze(2).repeat(1, 1, 3)  # B x N x 3
-        result[:, :, 0:3] = normals / norms
-
-        return result
+        return torch.stack(results, dim=1)

@@ -4,11 +4,15 @@ import torch
 import os
 from torch.utils.data import Dataset
 
+def transform_max_min_dict(max_min_dict):
+    max_norm = max_min_dict["max_norm"].unsqueeze(dim=0)
+    min_ = max_min_dict["min"]
+    return torch.cat((min_, max_norm))
 
 def collate_fn(batch):
     # idx, transformation_params, sample, voxel_grid, voxel_grid_cp, sym_planes
-    idxs = [item[0] for item in batch]
-    transformation_params_list = [item[1] for item in batch]
+    idxs = torch.tensor([item[0] for item in batch])
+    transformation_params_list = torch.stack([transform_max_min_dict(item[1]) for item in batch])
     samples = torch.stack([item[2] for item in batch])
     voxel_grids = torch.stack([item[3] for item in batch]).unsqueeze(1)
     voxel_grids_cp = torch.stack([item[4] for item in batch])
@@ -48,7 +52,7 @@ class VoxelDataset(Dataset):
 
     def __getitem__(self, idx):
         # Read items
-        with open(os.path.join(self.transformation_params_folder, f"trans_params_{idx}.pt"), "rb") as f:
+        with open(os.path.join(self.transformation_params_folder, f"trans_params_{idx}.pkl"), "rb") as f:
             transformation_params = pickle.load(f)
 
         points = torch.load(os.path.join(self.points_folder, f"points_{idx}.pt"))
