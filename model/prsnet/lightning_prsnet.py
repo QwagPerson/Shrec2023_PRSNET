@@ -8,15 +8,13 @@ import math
 
 class LightingPRSNet(L.LightningModule):
     def __init__(self,
-                 name,
-                 batch_size,
-                 input_resolution,
-                 amount_of_heads,
-                 out_features,
-                 use_bn,
-                 loss_used,
-                 reg_coef,
-                 sample_size
+                 name: str = "Name of model",
+                 input_resolution: int = 32,
+                 amount_of_heads: int = 12,
+                 out_features: int = 4,
+                 use_bn: bool = True,
+                 loss_used: str = "symloss",
+                 reg_coef: float = 25.0,
                  ):
         super().__init__()
         self.name = name
@@ -26,9 +24,11 @@ class LightingPRSNet(L.LightningModule):
         elif loss_used == "symloss":
             self.loss_fn = SymLoss(reg_coef)
         self.loss_used = loss_used
-        self.batch_size_used = batch_size
-        self.sample_size = sample_size
         self.save_hyperparameters(ignore=["net", "loss_fn"])
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        return optimizer
 
     def training_step(self, batch, batch_idx):
         sample_points, voxel_grids, voxel_grids_cp, y_true = batch
@@ -41,9 +41,15 @@ class LightingPRSNet(L.LightningModule):
         self.log("train_phc", train_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         return loss
 
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
+    def validation_step(self, batch, batch_idx):
+        sample_points, voxel_grids, voxel_grids_cp, y_true = batch
+        y_pred = self.net.forward(voxel_grids)
+
+        loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
+        val_phc = get_phc(batch, y_pred)
+
+        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("val_phc", val_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
     def test_step(self, batch, batch_idx):
         sample_points, voxel_grids, voxel_grids_cp, y_true = batch
@@ -54,16 +60,6 @@ class LightingPRSNet(L.LightningModule):
 
         self.log("test_loss", loss)
         self.log("test_phc", test_phc)
-
-    def validation_step(self, batch, batch_idx):
-        sample_points, voxel_grids, voxel_grids_cp, y_true = batch
-        y_pred = self.net.forward(voxel_grids)
-
-        loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
-        val_phc = get_phc(batch, y_pred)
-
-        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
-        self.log("val_phc", val_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         sample_points, voxel_grids, voxel_grids_cp, y_true = batch

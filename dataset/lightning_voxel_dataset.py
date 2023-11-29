@@ -1,15 +1,17 @@
+import random
+
 import lightning as L
 import torch
 
 from torch.utils.data import random_split, DataLoader
-from voxel_dataset import VoxelDataset
+from dataset.voxel_dataset import VoxelDataset
 
 
 class VoxelDataModule(L.LightningDataModule):
     def __init__(self,
-                 train_data_path: str,
-                 test_data_path: str,
-                 train_val_split: float,
+                 train_data_path: str = "/path/to/train_data",
+                 test_data_path: str = "/path/to/test_data",
+                 train_val_split: float = 0.9,
                  sample_size: int = 1024,
                  batch_size: int = 32,
                  shuffle: bool = True,
@@ -23,7 +25,7 @@ class VoxelDataModule(L.LightningDataModule):
         self.train_val_split = train_val_split
         self.sample_size = sample_size
         self.shuffle = shuffle
-        self.seed = seed
+        self.seed = seed if seed is not None else random.randint(0, 100)
         self.n_workers = n_workers
 
         self.save_hyperparameters()
