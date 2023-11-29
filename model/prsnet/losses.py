@@ -182,3 +182,29 @@ if __name__ == "__main__":
     loss = ChamferLoss(0)
     result = loss.forward(syms_plane.unsqueeze(0), points.unsqueeze(0), None, None, "cpu")
     print(result)"""
+
+def custom_loss(y_pred: torch.Tensor, y_true: torch.Tensor):
+    """
+    :param y_pred: Shape B x 1 x 6
+    :param y_true: Shape B x M x 6
+    :return: float of loss
+    """
+    M = y_true.shape[1]
+    y_pred = y_pred.repeat(1, M, 1)  # B x N x 7
+
+    # B x M x 1
+    normals_true = y_true[:, :, 0:3]
+    normals_pred = y_pred[:, :, 0:3]
+
+    points_true = y_true[:, :, 3::]
+    points_pred = y_pred[:, :, 3::]
+
+    ds = - torch.einsum('bnd,bnd->bn', points_true, normals_true)
+
+    distances = torch.abs(torch.einsum('bnd,bnd->bn', points_pred, normals_true) + ds)
+    angles = get_angle(normals_pred, normals_true)
+
+    min_distance = distances.min()
+    min_angles = angles.min()
+
+    return min_distance + min_angles

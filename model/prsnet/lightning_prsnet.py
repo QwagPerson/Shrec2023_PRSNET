@@ -1,7 +1,7 @@
 import torch
 from model.prsnet.prs_net import PRSNet
 from model.prsnet.losses import SymLoss, ChamferLoss
-from model.prsnet.metrics import get_phc, custom_loss
+from model.prsnet.metrics import get_phc
 import lightning as L
 import math
 

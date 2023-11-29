@@ -3,9 +3,11 @@ from lightning import Trainer
 from dataset.voxel_dataset import VoxelDataset
 from torch.utils.data import DataLoader
 import numpy as np
+import pathlib
 
 from model.prsnet.lightning_prsnet import LightingPRSNet
 from model.prsnet.metrics import transform_representation
+from argparse import ArgumentParser
 
 
 # pred is a tensor of shape 1 x N x 4
@@ -26,15 +28,27 @@ def save_predictions(preds, path):
         save_prediction(idx, pred, path)
 
 
-dataset = VoxelDataset("/data/voxel_dataset", sample_size=1024)
-dataloader = DataLoader(dataset, collate_fn=dataset.collate_fn, num_workers=3, batch_size=1, shuffle=False)
+parser = ArgumentParser()
+parser.add_argument("--data_path", type=pathlib.Path, required=True)
+parser.add_argument("--output_path", type=pathlib.Path, required=True)
+parser.add_argument("--model_path", type=pathlib.Path, required=True)
+parser.add_argument("--n_workers", type=int, required=False, default=4)
 
-model = LightingPRSNet.load_from_checkpoint(
-    "modelos_interesantes/remote_test/lightning_logs/version_21/checkpoints/epoch=28-step=3074.ckpt",
-    sample_size=1)
+if __name__ == "__main__":
+    args = vars(parser.parse_args())
+    DATA_PATH = args["data_path"]
+    OUTPUT_PATH = args["output_path"]
+    MODEL_PATH = args["model_path"]
+    N_WORKERS = args["n_workers"]
 
-# fun idx, tensor -> write file points_pred.txt
-# will use totxt from numpy so the algorithm goes tensor->array->file
-trainer = Trainer()
-predictions = trainer.predict(model, dataloader)
-save_predictions(predictions, "./test_pred")
+    model = LightingPRSNet.load_from_checkpoint(MODEL_PATH)
+
+    dataset = VoxelDataset(DATA_PATH, sample_size=model.sample_size)
+    if len(dataset) != 9000:
+        print(len(dataset))
+        raise Exception
+    dataloader = DataLoader(dataset, collate_fn=dataset.collate_fn, num_workers=N_WORKERS, batch_size=1, shuffle=False)
+
+    trainer = Trainer()
+    predictions = trainer.predict(model, dataloader)
+    save_predictions(predictions, OUTPUT_PATH)

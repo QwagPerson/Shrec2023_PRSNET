@@ -48,10 +48,10 @@ def visualize_prediction(predicted_planes_4, predicted_planes_6, real_planes, po
         apply_symmetry(points, predicted_planes_4[idx, 0:3], predicted_planes_4[idx, 3])
         for idx in range(predicted_planes_4.shape[0])
     ]
-
     # Visualize
     ps.init()
     ps.remove_all_structures()
+
     ps.register_point_cloud("original pcd", points.detach().numpy())
 
     for idx, sym_plane in enumerate(original_symmetries):
@@ -73,7 +73,7 @@ def visualize_prediction(predicted_planes_4, predicted_planes_6, real_planes, po
         )
 
     for idx, ref_points in enumerate(reflected_points):
-        ps.register_point_cloud(f"reflected_points_{idx}", ref_points.detach().numpy(), enabled=False,)
+        ps.register_point_cloud(f"reflected_points_{idx}", ref_points.detach().numpy(), enabled=False, )
 
     ps.show()
 
@@ -86,7 +86,7 @@ def visualize_prediction_results(batch, y_pred):
     :return:
     """
     original_points, voxel, cp, syms = batch
-    y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1,1,3)
+    y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
     transformed_y_pred = transform_representation(y_pred)[:, :, 0:6]
     for idx in range(original_points.shape[0]):
         visualize_prediction(
@@ -105,15 +105,15 @@ batch = next(iter_dataloader)
 original_points, voxel, cp, syms_other_rep = batch
 
 # Had to add sample size by hand because this model was trained on an earlier version of the module.
-model = LightingPRSNet.load_from_checkpoint("/home/gustavo_santelices/Documents/Universidad/memoria_al_limpio/modelos_interesantes/bueno/checkpoints/epoch=0-step=422.ckpt",
-                                            sample_size=1)
+path = "/home/gustavo_santelices/Documents/Universidad/memoria_al_limpio/modelos_interesantes/primer_ultimo/checkpoints/epoch=7-step=13504.ckpt"
+model = LightingPRSNet.load_from_checkpoint(path)
 loss_fn = ChamferLoss(0)
+
 
 # B x H x 4
 y_pred = model.net.forward(voxel)
 phc = get_phc(batch, y_pred, theta=3, eps_percent=0.03)
 
-loss = loss_fn.forward(y_pred, original_points, voxel, cp)
 print("PHC: ", phc)
 
 visualize_prediction_results(batch, y_pred)

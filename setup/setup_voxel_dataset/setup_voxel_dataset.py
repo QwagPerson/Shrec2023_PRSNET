@@ -157,7 +157,9 @@ if __name__ == '__main__':
     PERCENTAGE_USED = args["sample_size"]
     SEED = args["seed"]
     DEVICE = args["device"]
-
+    if AMOUNT_OF_WORKERS > 1:
+        # TODO: FIX ME
+        raise Exception("Currently buggy")
     torch.manual_seed(SEED)
     dataset_generator = torch.Generator(device=DEVICE).manual_seed(SEED)
 
