@@ -22,7 +22,7 @@ class PRSNet(nn.Module):
                 nn.LeakyReLU(),
             ]
 
-            if use_bn and i != n_conv_layers-1:
+            if use_bn and i != n_conv_layers - 1:
                 conv_layer.append(nn.BatchNorm3d(out_channels))
 
             conv_layers += conv_layer
@@ -45,7 +45,17 @@ class PRSNet(nn.Module):
 
     def forward(self, x):
         x = self.encoder(x)
+
         results = []
         for head in self.heads:
             results.append(head(x))
-        return torch.stack(results, dim=1)
+        result = torch.stack(results, dim=1)
+
+        # Normalizing normal of planes
+
+        normals = result[:, :, 0:3]  # B x N x 3
+        norms = torch.linalg.norm(normals, dim=2)  # B x N
+        norms = norms.unsqueeze(2).repeat(1, 1, 3)  # B x N x 3
+        result[:, :, 0:3] = normals / norms
+
+        return result

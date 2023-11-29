@@ -1,7 +1,7 @@
 import math
 
 import torch
-from model.prsnet.sym_loss import batch_dot
+from model.prsnet.losses import batch_dot
 
 
 def get_angle(a, b):

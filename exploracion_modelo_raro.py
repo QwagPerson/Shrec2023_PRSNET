@@ -13,10 +13,9 @@ from dataset.voxel_dataset import VoxelDataset
 from torch.utils.data import DataLoader, random_split
 
 from model.prsnet.lightning_prsnet import LightingPRSNet
-from model.prsnet.chamfer_loss import ChamferLoss, batch_apply_symmetry
+from model.prsnet.losses import ChamferLoss, batch_apply_symmetry, apply_symmetry
 from setup.setup_voxel_dataset.symmetry_plane import SymmetryPlane
 from model.prsnet.metrics import get_phc, transform_representation
-from model.prsnet.sym_loss import apply_symmetry
 
 
 def visualize_prediction(predicted_planes_4, predicted_planes_6, real_planes, points):
@@ -106,7 +105,7 @@ batch = next(iter_dataloader)
 original_points, voxel, cp, syms_other_rep = batch
 
 # Had to add sample size by hand because this model was trained on an earlier version of the module.
-model = LightingPRSNet.load_from_checkpoint("modelos_interesantes/remote_test/lightning_logs/version_21/checkpoints/epoch=28-step=3074.ckpt",
+model = LightingPRSNet.load_from_checkpoint("/home/gustavo_santelices/Documents/Universidad/memoria_al_limpio/modelos_interesantes/bueno/checkpoints/epoch=0-step=422.ckpt",
                                             sample_size=1)
 loss_fn = ChamferLoss(0)
 

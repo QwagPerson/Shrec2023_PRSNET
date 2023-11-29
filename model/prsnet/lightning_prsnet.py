@@ -33,10 +33,10 @@ class LightingPRSNet(L.LightningModule):
     def training_step(self, batch, batch_idx):
         sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids)
-        # Normalizing normal of planes
-        y_pred[:, :, 0:3] = y_pred[:, 0:3] / torch.linalg.norm(y_pred[:, 0:3], dim=1).unsqueeze(1)
+
         loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
         train_phc = get_phc(batch, y_pred)
+
         self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("train_phc", train_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         return loss
@@ -50,7 +50,6 @@ class LightingPRSNet(L.LightningModule):
         y_pred = self.net.forward(voxel_grids)
 
         loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
-
         test_phc = get_phc(batch, y_pred)
 
         self.log("test_loss", loss)
