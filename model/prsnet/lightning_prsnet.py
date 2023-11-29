@@ -34,6 +34,8 @@ class LightingPRSNet(L.LightningModule):
     def training_step(self, batch, batch_idx):
         sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids)
+        # B x H x 4 : Normalizacion
+        # Normalizer las normales de y_pred
         loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
         train_phc = get_phc(batch, y_pred)
         self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)

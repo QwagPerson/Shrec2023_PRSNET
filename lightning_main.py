@@ -56,6 +56,8 @@ if __name__ == "__main__":
     L.seed_everything(SEED)
     generator = torch.Generator().manual_seed(SEED)
 
+    torch.set_float32_matmul_precision('medium')
+
     proportions = [TRAIN_VAL_SPLIT, 1 - TRAIN_VAL_SPLIT]
     lengths = [int(p * len(dataset)) for p in proportions]
     lengths[-1] = len(dataset) - sum(lengths[:-1])
@@ -81,7 +83,7 @@ if __name__ == "__main__":
     trainer = L.Trainer(
         enable_checkpointing=True,
         callbacks=[
-            EarlyStopping(monitor="train_loss", mode="min", patience=PATIENCE)
+            EarlyStopping(monitor="val_loss", mode="min", patience=PATIENCE)
         ],
         default_root_dir=os.path.join(os.getcwd(), LOG_FOLDER),
         fast_dev_run=False,

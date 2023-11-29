@@ -40,11 +40,13 @@ def match(y_pred, y_true, theta, eps):
 
     ds = - torch.einsum('bnd,bnd->bn', points_true, normals_true)
 
-    distances = torch.einsum('bnd,bnd->bn', points_pred, normals_true) + ds  # B x N
+    distances = torch.abs(torch.einsum('bnd,bnd->bn', points_pred, normals_true) + ds)  # B x N
     angles = get_angle(normals_pred, normals_true) # B x N
 
-    angles_match = (angles < theta) | (angles - 180 < theta)
+
+    angles_match = (angles < theta) | (torch.abs(angles - 180) < theta)
     distances_match = distances < eps
+
 
     return angles_match & distances_match
 
@@ -81,7 +83,7 @@ def transform_representation(y_pred):
     :param y_pred: B x N x 4
     :return: B x N x 7
     """
-    y_pred_transformed = torch.zeros((y_pred.shape[0], y_pred.shape[1], 7))
+    y_pred_transformed = torch.zeros((y_pred.shape[0], y_pred.shape[1], 7), device=y_pred.device)
     # Copy normals
     y_pred_transformed[:, :, 0:3] = y_pred[:, :, 0:3]
     # Create point in plane
@@ -92,7 +94,7 @@ def transform_representation(y_pred):
     return y_pred_transformed
 
 
-def get_phc(batch, y_pred: torch.Tensor, theta=1):
+def get_phc(batch, y_pred: torch.Tensor, theta=1, eps_percent=0.01):
     """
     :param batch tuple of (
     sample_points, Shape B x S x 3
@@ -106,9 +108,8 @@ def get_phc(batch, y_pred: torch.Tensor, theta=1):
     """
     # Get eps
     sample_points, voxel_grids, voxel_grids_cp, y_true = batch
-    y_pred = y_pred.detach().clone()
-    eps = get_diagonals_length(sample_points) * 0.01
-
+    y_pred = y_pred.detach().clone().to(y_true.device)
+    eps = get_diagonals_length(sample_points) * eps_percent
     # Normalize y_pred
     y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1,1,3)
 

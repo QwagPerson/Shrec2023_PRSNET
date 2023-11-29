@@ -60,7 +60,8 @@ def visualize_prediction(predicted_planes_4, predicted_planes_6, real_planes, po
             f"original_sym_plane_{idx}",
             sym_plane.coords,
             sym_plane.trianglesBase,
-            smooth_shade=True
+            smooth_shade=True,
+            enabled=False,
         )
 
     for idx, sym_plane in enumerate(predicted_symmetries):
@@ -68,11 +69,12 @@ def visualize_prediction(predicted_planes_4, predicted_planes_6, real_planes, po
             f"predicted_sym_plane_{idx}",
             sym_plane.coords,
             sym_plane.trianglesBase,
-            smooth_shade=True
+            smooth_shade=True,
+            enabled=False,
         )
 
     for idx, ref_points in enumerate(reflected_points):
-        ps.register_point_cloud(f"reflected_points_{idx}", ref_points.detach().numpy())
+        ps.register_point_cloud(f"reflected_points_{idx}", ref_points.detach().numpy(), enabled=False,)
 
     ps.show()
 
@@ -97,20 +99,20 @@ def visualize_prediction_results(batch, y_pred):
 
 
 # -1 => No sampling
-dataset = VoxelDataset("/data/voxel_dataset", sample_size=1024)
-dataloader = DataLoader(dataset, collate_fn=dataset.collate_fn, num_workers=3, batch_size=2)
+dataset = VoxelDataset("/data/voxel_dataset", sample_size=-1)
+dataloader = DataLoader(dataset, collate_fn=dataset.collate_fn, num_workers=3, batch_size=1)
 iter_dataloader = iter(dataloader)
 batch = next(iter_dataloader)
 original_points, voxel, cp, syms_other_rep = batch
 
 # Had to add sample size by hand because this model was trained on an earlier version of the module.
-model = LightingPRSNet.load_from_checkpoint("modelos_interesantes/raro_3/checkpoints/epoch=79-step=160.ckpt",
+model = LightingPRSNet.load_from_checkpoint("modelos_interesantes/remote_test/lightning_logs/version_21/checkpoints/epoch=28-step=3074.ckpt",
                                             sample_size=1)
 loss_fn = ChamferLoss(0)
 
 # B x H x 4
 y_pred = model.net.forward(voxel)
-phc = get_phc(batch, y_pred)
+phc = get_phc(batch, y_pred, theta=3, eps_percent=0.03)
 
 loss = loss_fn.forward(y_pred, original_points, voxel, cp)
 print("PHC: ", phc)
