@@ -51,6 +51,13 @@ class VoxelDataModule(L.LightningDataModule):
                 sample_size=self.sample_size
             )
 
+        if stage == "predict":
+            self.voxel_predict = VoxelDataset(
+                dataset_root=self.test_data_path,
+                sample_size=self.sample_size
+            )
+
+
     def train_dataloader(self):
         return DataLoader(
             self.voxel_train,
@@ -73,6 +80,15 @@ class VoxelDataModule(L.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(
             self.voxel_test,
+            collate_fn=collate_fn,
+            batch_size=self.batch_size,
+            shuffle=False,
+            num_workers=self.n_workers,
+        )
+
+    def predict_dataloader(self):
+        return DataLoader(
+            self.voxel_predict,
             collate_fn=collate_fn,
             batch_size=self.batch_size,
             shuffle=False,

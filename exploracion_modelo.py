@@ -4,27 +4,29 @@ import os
 
 import lightning as L
 import torch
+from lightning import Trainer
 
 from lightning.pytorch.callbacks import EarlyStopping
 from argparse import ArgumentParser
 
 import polyscope as ps
+
+from dataset.lightning_voxel_dataset import VoxelDataModule
 from dataset.voxel_dataset import VoxelDataset
 from torch.utils.data import DataLoader, random_split
 
 from model.prsnet.lightning_prsnet import LightingPRSNet
 from model.prsnet.losses import ChamferLoss, batch_apply_symmetry, apply_symmetry
 from setup.setup_voxel_dataset.symmetry_plane import SymmetryPlane
-from model.prsnet.metrics import get_phc, transform_representation
+from model.prsnet.metrics import get_phc, transform_representation, undo_transform_representation
+from model.prsnet.lightning_prsnet import reverse_points_scaling_transformation, reverse_plane_scaling_transformation
 
 
-def visualize_prediction(predicted_planes_4, predicted_planes_6, real_planes, points):
+def visualize_prediction(pred_planes, points, real_planes):
     """
-    :param predicted_planes_4: N x 4
-    :param predicted_planes_6: N x 6
-    :param real_planes: M x 6
+    :param pred_planes: N x 7
     :param points: S x 3
-    :return: None
+    :param real_planes: M x 6 Are scaled!
     """
     # Create symmetryPlane Objs
     original_symmetries = [
@@ -37,16 +39,17 @@ def visualize_prediction(predicted_planes_4, predicted_planes_6, real_planes, po
 
     predicted_symmetries = [
         SymmetryPlane(
-            point=predicted_planes_6[idx, 3::].detach().numpy(),
-            normal=predicted_planes_6[idx, 0:3].detach().numpy()
+            point=pred_planes[idx, 3::].detach().numpy(),
+            normal=pred_planes[idx, 0:3].detach().numpy()
         )
-        for idx in range(predicted_planes_6.shape[0])
+        for idx in range(pred_planes.shape[0])
     ]
 
+    other_rep_pred_planes = undo_transform_representation(pred_planes.unsqueeze(0)).squeeze()
     # Reflect points
     reflected_points = [
-        apply_symmetry(points, predicted_planes_4[idx, 0:3], predicted_planes_4[idx, 3])
-        for idx in range(predicted_planes_4.shape[0])
+        apply_symmetry(points, other_rep_pred_planes[idx, 0:3], other_rep_pred_planes[idx, 3].unsqueeze(dim=0))
+        for idx in range(other_rep_pred_planes.shape[0])
     ]
     # Visualize
     ps.init()
@@ -78,42 +81,41 @@ def visualize_prediction(predicted_planes_4, predicted_planes_6, real_planes, po
     ps.show()
 
 
-def visualize_prediction_results(batch, y_pred):
+def visualize_prediction_results(prediction, visualize_unscaled=True):
     """
-
-    :param batch: tuple of original_points, voxel, cp, syms
-    :param y_pred:
+    :param prediction:
+    :param visualize_unscaled:
     :return:
     """
-    original_points, voxel, cp, syms = batch
-    y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
-    transformed_y_pred = transform_representation(y_pred)[:, :, 0:6]
-    for idx in range(original_points.shape[0]):
-        visualize_prediction(
-            predicted_planes_4=y_pred[idx, :, :],
-            predicted_planes_6=transformed_y_pred[idx, :, :],
-            real_planes=syms[idx, :, :],
-            points=original_points[idx, :, :]
-        )
+    prediction = [x.float() for x in prediction]
+    fig_idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out = prediction
+    batch_size = sample_points_out.shape[0]
+
+    for batch_idx in range(batch_size):
+        if visualize_unscaled:
+            visualize_prediction(
+                pred_planes=y_out[batch_idx, :, :],
+                real_planes=y_true_out[batch_idx, :, :],
+                points=sample_points_out[batch_idx, :, :]
+            )
+        else:
+            visualize_prediction(
+                pred_planes=y_pred[batch_idx, :, :],
+                real_planes=y_true[batch_idx, :, :],
+                points=sample_points[batch_idx, :, :]
+            )
 
 
-# -1 => No sampling
-dataset = VoxelDataset("/data/voxel_dataset", sample_size=-1)
-dataloader = DataLoader(dataset, collate_fn=dataset.collate_fn, num_workers=3, batch_size=1)
-iter_dataloader = iter(dataloader)
-batch = next(iter_dataloader)
-original_points, voxel, cp, syms_other_rep = batch
-
-# Had to add sample size by hand because this model was trained on an earlier version of the module.
-path = "/home/gustavo_santelices/Documents/Universidad/memoria_al_limpio/modelos_interesantes/primer_ultimo/checkpoints/epoch=7-step=13504.ckpt"
-model = LightingPRSNet.load_from_checkpoint(path)
-loss_fn = ChamferLoss(0)
-
-
-# B x H x 4
-y_pred = model.net.forward(voxel)
-phc = get_phc(batch, y_pred, theta=3, eps_percent=0.03)
-
-print("PHC: ", phc)
-
-visualize_prediction_results(batch, y_pred)
+if __name__ == "__main__":
+    MODEL_PATH = "/home/gustavo_santelices/Documents/Universidad/memoria_al_limpio/modelos_interesantes/primer_ultimo/checkpoints/epoch=7-step=13504.ckpt"
+    model = LightingPRSNet.load_from_checkpoint(MODEL_PATH)
+    data_module = VoxelDataModule(
+        test_data_path="/data/voxel_dataset_v2",
+        train_val_split=1,
+        batch_size=1,
+        sample_size=-1
+    )
+    trainer = Trainer()
+    predictions_results = trainer.predict(model, data_module)
+    for pred in predictions_results:
+        visualize_prediction_results(pred, visualize_unscaled=False)

@@ -16,7 +16,7 @@ def reverse_points_scaling_transformation(points, transformation_params):
     mins = transformation_params[:, 0:3]
     max_norms = transformation_params[:, 3]
 
-    return points * max_norms - mins
+    return points * max_norms.reshape(-1,1,1) - mins.unsqueeze(dim=1)
 
 
 def reverse_plane_scaling_transformation(y_out, transformation_params):
@@ -29,8 +29,8 @@ def reverse_plane_scaling_transformation(y_out, transformation_params):
     mins = transformation_params[:, 0:3]
     max_norms = transformation_params[:, 3]
 
-    # Un-scaling points
-    y_out[:, :, 3:6] = (y_out[:, :, 3:6] * max_norms) + mins
+    # Un-scaling points (Shape transformation are for using broadcast)
+    y_out[:, :, 3:6] = (y_out[:, :, 3:6] * max_norms.reshape(-1, 1, 1)) + mins.unsqueeze(dim=1)
 
     return y_out
 
@@ -97,9 +97,10 @@ class LightingPRSNet(L.LightningModule):
         # Normalize y_pred
         y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
 
-        y_out = transform_representation(y_pred)
+        y_pred = transform_representation(y_pred)
 
-        y_out = reverse_plane_scaling_transformation(y_out, transformation_params)
+        y_out = reverse_plane_scaling_transformation(y_pred, transformation_params)
+        y_true_out = reverse_plane_scaling_transformation(y_true, transformation_params)
         sample_points_out = reverse_points_scaling_transformation(sample_points, transformation_params)
 
-        return y_out, sample_points_out, y_pred, sample_points
+        return idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out

@@ -75,6 +75,20 @@ def get_diagonals_length(points: torch.Tensor):
     return torch.linalg.norm(diagonals, dim=1)
 
 
+def undo_transform_representation(y_pred):
+    """
+
+    :param y_pred: B x N x 7
+    :return: B x N x 4
+    """
+    y_pred_transformed = torch.zeros((y_pred.shape[0], y_pred.shape[1], 4), device=y_pred.device)
+    # Copy normals
+    y_pred_transformed[:, :, 0:3] = y_pred[:, :, 0:3]
+    # Calculate offset
+    y_pred_transformed[:, :, 3] = - torch.einsum('bnd,bnd->bn', y_pred[:, :, 3:6], y_pred[:, :, 0:3])
+    return y_pred_transformed
+
+
 def transform_representation(y_pred):
     """
 
