@@ -108,7 +108,7 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
 
 
 if __name__ == "__main__":
-    MODEL_PATH = "local_logs/lightning_logs/version_1/checkpoints/epoch=8-step=54.ckpt"
+    MODEL_PATH = "local_logs/lightning_logs/version_0/checkpoints/epoch=83-step=504.ckpt"
     model = LightingPRSNet.load_from_checkpoint(MODEL_PATH)
     data_module = VoxelDataModule(
         test_data_path="/data/voxel_dataset_v2",

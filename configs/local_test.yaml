@@ -19,7 +19,7 @@ trainer:
     init_args:
       monitor: train_loss
       min_delta: 0.0
-      patience: 3
+      patience: 100
       verbose: false
       mode: min
       strict: true
@@ -73,7 +73,7 @@ trainer:
   detect_anomaly: false
   barebones: false
   plugins: null
-  sync_batchnorm: false
+  sync_batchnorm: true
   reload_dataloaders_every_n_epochs: 0
   default_root_dir: ./local_logs
 model:
@@ -82,13 +82,13 @@ model:
   amount_of_heads: 1
   out_features: 4
   use_bn: true
-  loss_used: symloss
+  loss_used: chamfer
   reg_coef: 0.0
 data:
   train_data_path: /data/voxel_dataset_v2/
   test_data_path: /data/gsanteli/voxel_dataset_test_32_full_v2
   train_val_split: 1.0
-  sample_size: 2048
+  sample_size: -1
   batch_size: 1
   shuffle: true
   seed: 2354

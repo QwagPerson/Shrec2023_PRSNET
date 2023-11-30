@@ -83,9 +83,10 @@ class LightingPRSNet(L.LightningModule):
     def test_step(self, batch, batch_idx):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids)
+        y_pred = undo_transform_representation(y_true)
 
         loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
-        test_phc = get_phc(batch, y_pred)
+        test_phc = get_phc(batch, y_pred, eps_percent=0.03)
 
         out_sample_points = reverse_points_scaling_transformation(sample_points, transformation_params)
         out_y_pred = transform_representation(y_pred)
