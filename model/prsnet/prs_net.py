@@ -33,15 +33,30 @@ class PRSNet(nn.Module):
 
         self.heads = nn.ModuleList([])
         for i in range(amount_of_heads):
-            self.heads.append(nn.Sequential(
-                nn.Linear(in_channels, 64),
-                nn.LeakyReLU(),
-                nn.Linear(64, 32),
-                nn.LeakyReLU(),
-                nn.Linear(32, 16),
-                nn.LeakyReLU(),
-                nn.Linear(16, out_features),
-            ))
+            if use_bn:
+                self.heads.append(nn.Sequential(
+                    nn.Linear(in_channels, 64),
+                    nn.LeakyReLU(),
+                    nn.BatchNorm1d(64),
+                    nn.Linear(64, 32),
+                    nn.LeakyReLU(),
+                    nn.BatchNorm1d(32),
+                    nn.Linear(32, 16),
+                    nn.LeakyReLU(),
+                    nn.BatchNorm1d(16),
+                    nn.Linear(16, out_features),
+                ))
+            else:
+                self.heads.append(nn.Sequential(
+                    nn.Linear(in_channels, 64),
+                    nn.LeakyReLU(),
+                    nn.Linear(64, 32),
+                    nn.LeakyReLU(),
+                    nn.Linear(32, 16),
+                    nn.LeakyReLU(),
+                    nn.Linear(16, out_features),
+                ))
+
 
     def forward(self, x):
         x = self.encoder(x)
