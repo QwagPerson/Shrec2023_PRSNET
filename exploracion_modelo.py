@@ -26,21 +26,24 @@ def visualize_prediction(pred_planes, points, real_planes):
     """
     :param pred_planes: N x 7
     :param points: S x 3
-    :param real_planes: M x 6 Are scaled!
+    :param real_planes: M x 6
     """
     # Create symmetryPlane Objs
+    print(real_planes)
+    print(real_planes[0, 0:3].detach().numpy())
+    print(real_planes[0, 3::].detach().numpy())
     original_symmetries = [
         SymmetryPlane(
+            normal=real_planes[idx, 0:3].detach().numpy(),
             point=real_planes[idx, 3::].detach().numpy(),
-            normal=real_planes[idx, 0:3].detach().numpy()
         )
         for idx in range(real_planes.shape[0])
     ]
 
     predicted_symmetries = [
         SymmetryPlane(
+            normal=pred_planes[idx, 0:3].detach().numpy(),
             point=pred_planes[idx, 3::].detach().numpy(),
-            normal=pred_planes[idx, 0:3].detach().numpy()
         )
         for idx in range(pred_planes.shape[0])
     ]
@@ -51,6 +54,7 @@ def visualize_prediction(pred_planes, points, real_planes):
         apply_symmetry(points, other_rep_pred_planes[idx, 0:3], other_rep_pred_planes[idx, 3].unsqueeze(dim=0))
         for idx in range(other_rep_pred_planes.shape[0])
     ]
+
     # Visualize
     ps.init()
     ps.remove_all_structures()
@@ -63,7 +67,7 @@ def visualize_prediction(pred_planes, points, real_planes):
             sym_plane.coords,
             sym_plane.trianglesBase,
             smooth_shade=True,
-            enabled=False,
+            enabled=True,
         )
 
     for idx, sym_plane in enumerate(predicted_symmetries):
@@ -90,16 +94,20 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
     """
     prediction = [x.float() for x in prediction]
     fig_idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out = prediction
+    print(sample_points_out[0, 0:10, :])
+    print(sample_points[0, 0:10, :])
     batch_size = sample_points_out.shape[0]
 
     for batch_idx in range(batch_size):
         if visualize_unscaled:
+            print("bo")
             visualize_prediction(
                 pred_planes=y_out[batch_idx, :, :],
                 real_planes=y_true_out[batch_idx, :, :],
                 points=sample_points_out[batch_idx, :, :]
             )
         else:
+            print("ba")
             visualize_prediction(
                 pred_planes=y_pred[batch_idx, :, :],
                 real_planes=y_true[batch_idx, :, :],
@@ -108,7 +116,7 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
 
 
 if __name__ == "__main__":
-    MODEL_PATH = "local_logs/lightning_logs/version_0/checkpoints/epoch=83-step=504.ckpt"
+    MODEL_PATH = "modelos_interesantes/version_13_so_many_heads_omaigai/checkpoints/epoch=12-step=10972.ckpt"
     model = LightingPRSNet.load_from_checkpoint(MODEL_PATH)
     data_module = VoxelDataModule(
         test_data_path="/data/voxel_dataset_v2",
@@ -118,8 +126,13 @@ if __name__ == "__main__":
         shuffle=False
     )
     trainer = Trainer(enable_progress_bar=False)
-    trainer.test(model, data_module)
     predictions_results = trainer.predict(model, data_module)
     for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=False)
-        break
+
+    for pred in predictions_results:
+        visualize_prediction_results(pred, visualize_unscaled=True)
+
+    trainer.test(model, data_module)
+
+

@@ -15,7 +15,6 @@ class VoxelDataModule(L.LightningDataModule):
                  sample_size: int = 1024,
                  batch_size: int = 32,
                  shuffle: bool = True,
-                 seed: int = None,
                  n_workers: int = 1,
                  ):
         super().__init__()
@@ -25,7 +24,6 @@ class VoxelDataModule(L.LightningDataModule):
         self.train_val_split = train_val_split
         self.sample_size = sample_size
         self.shuffle = shuffle
-        self.seed = seed if seed is not None else random.randint(0, 100)
         self.n_workers = n_workers
 
         self.save_hyperparameters()
@@ -42,7 +40,7 @@ class VoxelDataModule(L.LightningDataModule):
             lengths[-1] = len(dataset_full) - sum(lengths[:-1])
 
             self.voxel_train, self.voxel_val = random_split(
-                dataset_full, lengths, generator=torch.Generator().manual_seed(self.seed)
+                dataset_full, lengths
             )
 
         if stage == "test":
@@ -65,7 +63,6 @@ class VoxelDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=self.shuffle,
             num_workers=self.n_workers,
-            generator=torch.Generator().manual_seed(self.seed)
         )
 
     def val_dataloader(self):

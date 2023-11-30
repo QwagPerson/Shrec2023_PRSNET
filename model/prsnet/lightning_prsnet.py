@@ -13,10 +13,19 @@ def reverse_points_scaling_transformation(points, transformation_params):
     :param transformation_params: B x 4
     :return: B x S x 3
     """
-    mins = transformation_params[:, 0:3]
-    max_norms = transformation_params[:, 3]
+    points = points.clone()
 
-    return points * max_norms.reshape(-1,1,1) - mins.unsqueeze(dim=1)
+    mins = transformation_params[:, 0:3]  # B x 3
+    max_norms = transformation_params[:, 3]  # B
+
+    bs = points.shape[0]
+
+    for bidx in range(bs):
+        curr_max = max_norms[bidx]  # 1
+        curr_min = mins[bidx]  # 3
+        points[bidx, :, :] = points[bidx, :, :] * curr_max + curr_min
+
+    return points
 
 
 def reverse_plane_scaling_transformation(y_out, transformation_params):
@@ -26,11 +35,19 @@ def reverse_plane_scaling_transformation(y_out, transformation_params):
     :param transformation_params: B x 4
     :return: y_out where the point of each plane has its scaling reversed.
     """
-    mins = transformation_params[:, 0:3]
-    max_norms = transformation_params[:, 3]
+    y_out = y_out.clone()
 
-    # Un-scaling points (Shape transformation are for using broadcast)
-    y_out[:, :, 3:6] = (y_out[:, :, 3:6] * max_norms.reshape(-1, 1, 1)) + mins.unsqueeze(dim=1)
+    mins = transformation_params[:, 0:3]  # B x 3
+    max_norms = transformation_params[:, 3]  # B
+
+    bs = y_out.shape[0]
+    n_heads = y_out.shape[1]
+
+    for bidx in range(bs):
+        curr_max = max_norms[bidx]  # 1
+        curr_min = mins[bidx]  # 3
+        for nidx in range(n_heads):
+            y_out[bidx, nidx, 3:6] = y_out[bidx, nidx, 3:6] * curr_max + curr_min
 
     return y_out
 
@@ -63,7 +80,7 @@ class LightingPRSNet(L.LightningModule):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids)
 
-        loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
+        loss = self.loss_fn.forward(batch, y_pred)
         train_phc = get_phc(batch, y_pred)
 
         self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
@@ -74,7 +91,7 @@ class LightingPRSNet(L.LightningModule):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids)
 
-        loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
+        loss = self.loss_fn.forward(batch, y_pred)
         val_phc = get_phc(batch, y_pred)
 
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
@@ -83,15 +100,15 @@ class LightingPRSNet(L.LightningModule):
     def test_step(self, batch, batch_idx):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids)
-        y_pred = undo_transform_representation(y_true)
 
-        loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
-        test_phc = get_phc(batch, y_pred, eps_percent=0.03)
+        loss = self.loss_fn.forward(batch, y_pred)
+        test_phc = get_phc(batch, y_pred)
 
         out_sample_points = reverse_points_scaling_transformation(sample_points, transformation_params)
         out_y_pred = transform_representation(y_pred)
         out_y_pred = reverse_plane_scaling_transformation(out_y_pred, transformation_params)
         out_y_pred = undo_transform_representation(out_y_pred)
+
         out_y_true = reverse_plane_scaling_transformation(y_true, transformation_params)
 
         out_test_phc = get_phc(

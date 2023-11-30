@@ -54,7 +54,7 @@ def planar_reflective_sym_reg_loss(planes: torch.Tensor):  # Tensor of shape [Bx
     :param planes: Tensor of shape B x C x 4 of 3D planes
     :return: The Frobenius norm of the matrix of the normals.
     """
-    normals = planes[:, :, :3]
+    normals = planes[:, :, 0:3]
     normals = normals / torch.linalg.norm(normals, dim=2, keepdim=True).expand(-1, -1, 3)
     a = torch.bmm(normals, normals.transpose(1, 2)) - torch.eye(normals.shape[1]).to(normals.device)
     return torch.linalg.matrix_norm(a)
@@ -76,20 +76,21 @@ class ChamferLoss(nn.Module):
 
     def forward(
             self,
-            predicted_planes,  # tensor of shape [BxCx4]
-            sample_points,  # tensor of shape [BxNx3]
-            voxel_grids,  # tensor of shape [Bx1xRxRxR]
-            cp_grids,  # tensor of shape [BxRxRxRx3]
+            batch,
+            y_pred,
     ):
-        amount_of_heads = predicted_planes.shape[1]
-        device = predicted_planes.device
+        idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
+
+        batch_size = y_pred.shape[0]
+        amount_of_heads = y_pred.shape[1]
+        device = y_pred.device
 
         # First regularization loss
-        regularization_loss = planar_reflective_sym_reg_loss(predicted_planes).to(device)
+        regularization_loss = planar_reflective_sym_reg_loss(y_pred).to(device)
 
         reflexion_loss = torch.tensor([0.0]).to(device)
         for current_head_idx in range(amount_of_heads):
-            predicted_planes_by_head = predicted_planes[:, current_head_idx, :]
+            predicted_planes_by_head = y_pred[:, current_head_idx, :]
             reflected_points = batch_apply_symmetry(sample_points, predicted_planes_by_head)
             reflexion_loss += self.distance(
                 sample_points, reflected_points,
@@ -140,33 +141,32 @@ class SymLoss(nn.Module):
         is_voxel_filled = voxel_grid[x, y, z]
 
         # Calculate distance
-        distance = torch.norm(reflected_sample - cp, dim=1)  # * is_voxel_filled
+        distance = torch.norm(reflected_sample - cp, dim=1)# * is_voxel_filled
 
         return distance.mean()
 
     def forward(
             self,
-            predicted_planes,  # tensor of shape [BxCx4]
-            sample_points,  # tensor of shape [BxNx3]
-            voxel_grids,  # tensor of shape [Bx1xRxRxR]
-            cp_grids,  # tensor of shape [BxRxRxRx3]
+            batch,
+            y_pred,
     ):
-        batch_size = predicted_planes.shape[0]
-        amount_of_heads = predicted_planes.shape[1]
-        res = cp_grids.shape[1]
-        device = predicted_planes.device
+        idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
 
-        # First regularization loss
-        regularization_loss = planar_reflective_sym_reg_loss(predicted_planes).to(device)
-        # Second reflexion loss
+        batch_size = y_pred.shape[0]
+        amount_of_heads = y_pred.shape[1]
+        device = y_pred.device
+
+        regularization_loss = planar_reflective_sym_reg_loss(y_pred).to(device)
+
         reflexion_loss = torch.tensor([0.0]).to(device)
         for batch_idx in range(batch_size):
             for current_head_idx in range(amount_of_heads):
-                curr_plane = predicted_planes[batch_idx, current_head_idx, :]
+                curr_plane = y_pred[batch_idx, current_head_idx, :]
                 curr_sample = sample_points[batch_idx, :, :]
                 curr_voxel_grid = voxel_grids[batch_idx, 0, :, :, :]
-                curr_cp_voxel_grid = cp_grids[batch_idx, :, :, :, :]
+                curr_cp_voxel_grid = voxel_grids_cp[batch_idx, :, :, :, :]
                 reflexion_loss += self.planar_reflective_sym_distance_loss(
                     curr_plane, curr_sample, curr_voxel_grid, curr_cp_voxel_grid
                 )
-        return reflexion_loss + self.reg_coef * regularization_loss.sum()
+
+        return reflexion_loss + self.reg_coef * regularization_loss.mean()

@@ -1,5 +1,5 @@
 # lightning.pytorch==2.1.2
-seed_everything: 1313
+seed_everything: null
 trainer:
   accelerator: auto
   strategy: auto
@@ -19,8 +19,8 @@ trainer:
     init_args:
       monitor: train_loss
       min_delta: 0.0
-      patience: 100
-      verbose: false
+      patience: 1000
+      verbose: true
       mode: min
       strict: true
       check_finite: true
@@ -79,18 +79,17 @@ trainer:
 model:
   name: Good Prs Net
   input_resolution: 32
-  amount_of_heads: 1
+  amount_of_heads: 12
   out_features: 4
-  use_bn: true
-  loss_used: chamfer
-  reg_coef: 0.0
+  use_bn: false
+  loss_used: symloss
+  reg_coef: 1.0
 data:
   train_data_path: /data/voxel_dataset_v2/
   test_data_path: /data/gsanteli/voxel_dataset_test_32_full_v2
   train_val_split: 1.0
   sample_size: -1
   batch_size: 1
-  shuffle: true
-  seed: 2354
-  n_workers: 7
+  shuffle: false
+  n_workers: 3
 ckpt_path: null

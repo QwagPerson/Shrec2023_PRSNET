@@ -5,7 +5,7 @@ import torch
 
 
 def cli_main():
-    torch.set_float32_matmul_precision('medium')
+    torch.set_float32_matmul_precision('high')
     cli = LightningCLI(LightingPRSNet, VoxelDataModule)
 
 
