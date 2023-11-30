@@ -11,6 +11,7 @@ class VoxelDataModule(L.LightningDataModule):
     def __init__(self,
                  train_data_path: str = "/path/to/train_data",
                  test_data_path: str = "/path/to/test_data",
+                 predict_data_path: str = "/path/to/test_data",
                  train_val_split: float = 0.9,
                  sample_size: int = 1024,
                  batch_size: int = 32,
@@ -20,6 +21,7 @@ class VoxelDataModule(L.LightningDataModule):
         super().__init__()
         self.train_data_path = train_data_path
         self.test_data_path = test_data_path
+        self.predict_data_path = predict_data_path
         self.batch_size = batch_size
         self.train_val_split = train_val_split
         self.sample_size = sample_size
@@ -51,10 +53,10 @@ class VoxelDataModule(L.LightningDataModule):
 
         if stage == "predict":
             self.voxel_predict = VoxelDataset(
-                dataset_root=self.test_data_path,
-                sample_size=self.sample_size
+                dataset_root=self.predict_data_path,
+                sample_size=self.sample_size,
+                is_predict_dataset=True
             )
-
 
     def train_dataloader(self):
         return DataLoader(
