@@ -1,10 +1,11 @@
 from lightning.pytorch.cli import LightningCLI
 from model.prsnet.lightning_prsnet import LightingPRSNet
 from dataset.lightning_voxel_dataset import VoxelDataModule
-from lightning.pytorch.callbacks import EarlyStopping
+import torch
 
 
 def cli_main():
+    torch.set_float32_matmul_precision('medium')
     cli = LightningCLI(LightingPRSNet, VoxelDataModule)
 
 

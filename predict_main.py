@@ -15,7 +15,7 @@ def save_prediction(pred, path):
     n_heads = y_out.shape[1]
     pred = y_out.squeeze().numpy().reshape((n_heads, 7))
     with open(os.path.join(path, f"points{idx}_res.txt"), "w") as f:
-        f.write(str(idx))
+        f.write(str(y_out.shape[1]))
         f.write("\n")
         np.savetxt(f, pred)
 
@@ -45,7 +45,8 @@ if __name__ == "__main__":
     data_module = VoxelDataModule(
         test_data_path=DATA_PATH,
         train_val_split=1,
-        batch_size=1
+        batch_size=1,
+        n_workers=N_WORKERS
     )
 
     trainer = Trainer()

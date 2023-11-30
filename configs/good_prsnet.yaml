@@ -1,12 +1,12 @@
 # lightning.pytorch==2.1.2
-seed_everything: true
+seed_everything: 1313
 trainer:
   accelerator: auto
   strategy: auto
   devices: auto
   num_nodes: 1
   precision: null
-  logger: null
+  logger: csv
   callbacks:
     - class_path: lightning.pytorch.callbacks.EarlyStopping
       init_args:

@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, random_split
 from model.prsnet.lightning_prsnet import LightingPRSNet
 from model.prsnet.losses import ChamferLoss, batch_apply_symmetry, apply_symmetry
 from setup.setup_voxel_dataset.symmetry_plane import SymmetryPlane
-from model.prsnet.metrics import get_phc, transform_representation, undo_transform_representation
+from model.prsnet.metrics import get_phc, transform_representation, undo_transform_representation, get_diagonals_length
 from model.prsnet.lightning_prsnet import reverse_points_scaling_transformation, reverse_plane_scaling_transformation
 
 
@@ -74,6 +74,7 @@ def visualize_prediction(pred_planes, points, real_planes):
             smooth_shade=True,
             enabled=False,
         )
+        break
 
     for idx, ref_points in enumerate(reflected_points):
         ps.register_point_cloud(f"reflected_points_{idx}", ref_points.detach().numpy(), enabled=False, )
@@ -107,15 +108,17 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
 
 
 if __name__ == "__main__":
-    MODEL_PATH = "/home/gustavo_santelices/Documents/Universidad/memoria_al_limpio/modelos_interesantes/primer_ultimo/checkpoints/epoch=7-step=13504.ckpt"
+    MODEL_PATH = "modelos_interesantes/primer_ultimo/checkpoints/epoch=7-step=13504.ckpt"
     model = LightingPRSNet.load_from_checkpoint(MODEL_PATH)
     data_module = VoxelDataModule(
         test_data_path="/data/voxel_dataset_v2",
         train_val_split=1,
         batch_size=1,
-        sample_size=-1
+        sample_size=-1,
+        shuffle=False
     )
-    trainer = Trainer()
+    trainer = Trainer(enable_progress_bar=False)
+    trainer.test(model, data_module)
     predictions_results = trainer.predict(model, data_module)
     for pred in predictions_results:
-        visualize_prediction_results(pred, visualize_unscaled=False)
+        visualize_prediction_results(pred, visualize_unscaled=True)

@@ -34,7 +34,7 @@ class VoxelDataModule(L.LightningDataModule):
         if stage == "fit":
             dataset_full = VoxelDataset(
                 dataset_root=self.train_data_path,
-                sample_size=self.sample_size
+                sample_size=self.sample_size,
             )
 
             proportions = [self.train_val_split, 1 - self.train_val_split]

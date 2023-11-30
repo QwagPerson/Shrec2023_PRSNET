@@ -1,7 +1,7 @@
 import torch
 from model.prsnet.prs_net import PRSNet
 from model.prsnet.losses import SymLoss, ChamferLoss
-from model.prsnet.metrics import get_phc
+from model.prsnet.metrics import get_phc, undo_transform_representation
 import lightning as L
 from model.prsnet.metrics import transform_representation
 
@@ -87,8 +87,20 @@ class LightingPRSNet(L.LightningModule):
         loss = self.loss_fn.forward(y_pred, sample_points, voxel_grids, voxel_grids_cp)
         test_phc = get_phc(batch, y_pred)
 
-        self.log("test_loss", loss)
-        self.log("test_phc", test_phc)
+        out_sample_points = reverse_points_scaling_transformation(sample_points, transformation_params)
+        out_y_pred = transform_representation(y_pred)
+        out_y_pred = reverse_plane_scaling_transformation(out_y_pred, transformation_params)
+        out_y_pred = undo_transform_representation(out_y_pred)
+        out_y_true = reverse_plane_scaling_transformation(y_true, transformation_params)
+
+        out_test_phc = get_phc(
+            (idx, transformation_params, out_sample_points, voxel_grids, voxel_grids_cp, out_y_true),
+            out_y_pred
+        )
+
+        self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("test_phc", test_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("out_test_phc", out_test_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
