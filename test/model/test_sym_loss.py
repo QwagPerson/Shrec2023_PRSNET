@@ -4,7 +4,7 @@ import unittest
 import torch
 from dotenv import load_dotenv
 
-from model.prsnet.sym_loss import SymLoss, apply_symmetry, batch_dot
+from model.prsnet.losses import SymLoss, apply_symmetry, batch_dot
 from dataset.voxel_dataset import VoxelDataset
 
 
@@ -12,12 +12,7 @@ class TestSymLoss(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.sym_loss = SymLoss(reg_coef=0)
-        AMBIENTE = "local"
-        ENV_PATH = f"envs/.{AMBIENTE}.env"
-        env = load_dotenv(ENV_PATH)
-        if not env:
-            raise ValueError(f"Failed to load env, path used is {ENV_PATH}")
-        cls.dataset = VoxelDataset(os.environ.get("VOXEL_DATASET_ROOT"))
+        cls.dataset = VoxelDataset("/data/voxel_dataset_v2")
 
     def test_batch_dot_function(self):
         a = torch.rand(10, 3)
@@ -47,7 +42,7 @@ class TestSymLoss(unittest.TestCase):
                         [0.0, -1.0, 0.0], [0.0, 1.0, 0.0]
                     ]),
                     normal=torch.tensor([0.0, 1.0, 0.0]),
-                    d=torch.tensor(0)
+                    offset=torch.tensor(0)
                 )
             )
         )
@@ -63,7 +58,7 @@ class TestSymLoss(unittest.TestCase):
                         [-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]
                     ]),
                     normal=torch.tensor([1.0, 0.0, 0.0]),
-                    d=torch.tensor(0)
+                    offset=torch.tensor(0)
                 )
             )
         )
@@ -79,7 +74,7 @@ class TestSymLoss(unittest.TestCase):
                         [0.0, 0.0, -1.0], [0.0, 0.0, 1.0]
                     ]),
                     normal=torch.tensor([0.0, 0.0, 1.0]),
-                    d=torch.tensor(0)
+                    offset=torch.tensor(0)
                 )
             )
         )
@@ -95,13 +90,13 @@ class TestSymLoss(unittest.TestCase):
                         [0.0, 0.0, 0.0], [0.0, 0.0, 2.0]
                     ]),
                     normal=torch.tensor([0.0, 0.0, 1.0]),
-                    d=torch.tensor(-1)
+                    offset=torch.tensor(-1)
                 )
             )
         )
 
     def test_against_real_figures(self):
-        points, voxel, cp, syms = self.dataset[0]
+        _, _, points, voxel, cp, syms = self.dataset[0]
         for idx in range(syms.shape[0]):
             sym = syms[idx, :]
             d = -torch.dot(sym[0:3], sym[3::])

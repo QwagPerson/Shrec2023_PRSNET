@@ -7,20 +7,21 @@ from model.prsnet.metrics import get_phc
 
 class TestMetrics(unittest.TestCase):
     def test_correct_shapes_io(self):
-        # B x N x (6+1), B: Batch N: Amount of symmetries predicted per input
-        # (6+1): normal, point and confindence
-        mock_y_pred = torch.ones((10, 8, 7))
+        mock_y_pred = torch.ones((10, 8, 4))
         mock_y_test = torch.ones((10, 8, 6))
 
-        # Output is B a mask of true and false
-        phc_return = get_phc(mock_y_pred, mock_y_test)
+        mock_sample_points = torch.tensor([[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]])
 
-        self.assertEqual(phc_return, 1)
+        phc_return = get_phc((
+            None, None, mock_sample_points, None, None, mock_y_test
+        ), mock_y_pred)
+
+        self.assertEqual(phc_return, 0.0)
 
     def test_correct_matching_single_plane(self):
         mock_y_pred = torch.tensor([
             [
-                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+                [1.0, 0.0, 0.0, 0.0]
             ]
         ])
         mock_y_test = torch.tensor([
@@ -29,15 +30,19 @@ class TestMetrics(unittest.TestCase):
             ]
         ])
 
-        phc_return = get_phc(mock_y_pred, mock_y_test)
+        mock_sample_points = torch.tensor([[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]])
+
+        phc_return = get_phc((
+            None, None, mock_sample_points, None, None, mock_y_test
+        ), mock_y_pred)
 
         self.assertEqual(phc_return, 1)
 
     def test_correct_matching_multiple_plane(self):
         mock_y_pred = torch.tensor([
             [
-                [1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 1.0],
-                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.8],
+                [1.0, 1.0, 1.0, 0.0],
+                [1.0, 0.0, 0.0, 0.0],
             ]
         ])
         mock_y_test = torch.tensor([
@@ -46,9 +51,13 @@ class TestMetrics(unittest.TestCase):
             ]
         ])
 
-        phc_return = get_phc(mock_y_pred, mock_y_test)
+        mock_sample_points = torch.tensor([[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]])
 
-        self.assertEqual(phc_return, 0)
+        phc_return = get_phc((
+            None, None, mock_sample_points, None, None, mock_y_test
+        ), mock_y_pred)
+
+        self.assertEqual(phc_return, 0.0)
 
     def test_correct_matching_batch_size_2(self):
         mock_y_pred = torch.tensor([
@@ -68,14 +77,18 @@ class TestMetrics(unittest.TestCase):
             ]
         ])
 
-        phc_return = get_phc(mock_y_pred, mock_y_test)
+        mock_sample_points = torch.tensor([[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]])
+
+        phc_return = get_phc((
+            None, None, mock_sample_points, None, None, mock_y_test
+        ), mock_y_pred)
 
         self.assertEqual(phc_return, 0.5)
 
     def test_correct_matching_multiple_label_planes(self):
         mock_y_pred = torch.tensor([
             [
-                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.8],
+                [1.0, 0.0, 0.0, 0.0],
             ]
         ])
         mock_y_test = torch.tensor([
@@ -84,7 +97,10 @@ class TestMetrics(unittest.TestCase):
                 [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             ]
         ])
+        mock_sample_points = torch.tensor([[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]])
 
-        phc_return = get_phc(mock_y_pred, mock_y_test)
+        phc_return = get_phc((
+            None, None, mock_sample_points, None, None, mock_y_test
+        ), mock_y_pred)
 
         self.assertEqual(phc_return, 1)

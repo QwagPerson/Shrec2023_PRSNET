@@ -45,7 +45,7 @@ def visualize_prediction(pred_planes, points, real_planes):
         for idx in range(pred_planes.shape[0])
     ]
 
-    other_rep_pred_planes = undo_transform_representation(pred_planes.unsqueeze(0)).squeeze()
+    other_rep_pred_planes = undo_transform_representation(pred_planes.unsqueeze(0)).squeeze(dim=0)
     # Reflect points
     reflected_points = [
         apply_symmetry(points, other_rep_pred_planes[idx, 0:3], other_rep_pred_planes[idx, 3].unsqueeze(dim=0))
@@ -74,7 +74,7 @@ def visualize_prediction(pred_planes, points, real_planes):
             smooth_shade=True,
             enabled=False,
         )
-        break
+
 
     for idx, ref_points in enumerate(reflected_points):
         ps.register_point_cloud(f"reflected_points_{idx}", ref_points.detach().numpy(), enabled=False, )
@@ -108,7 +108,7 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
 
 
 if __name__ == "__main__":
-    MODEL_PATH = "modelos_interesantes/primer_ultimo/checkpoints/epoch=7-step=13504.ckpt"
+    MODEL_PATH = "local_logs/lightning_logs/version_1/checkpoints/epoch=8-step=54.ckpt"
     model = LightingPRSNet.load_from_checkpoint(MODEL_PATH)
     data_module = VoxelDataModule(
         test_data_path="/data/voxel_dataset_v2",
@@ -121,4 +121,5 @@ if __name__ == "__main__":
     trainer.test(model, data_module)
     predictions_results = trainer.predict(model, data_module)
     for pred in predictions_results:
-        visualize_prediction_results(pred, visualize_unscaled=True)
+        visualize_prediction_results(pred, visualize_unscaled=False)
+        break

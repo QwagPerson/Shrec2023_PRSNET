@@ -4,7 +4,7 @@ import torch
 
 from dataset.voxel_dataset import VoxelDataset
 from setup.setup_voxel_dataset.voxel import Voxel, compute_closest_points
-from model.prsnet.sym_loss import apply_symmetry
+from model.prsnet.losses import apply_symmetry
 from dotenv import load_dotenv
 
 
@@ -27,12 +27,7 @@ class TestVoxelClass(unittest.TestCase):
             [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
             [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]
         ])
-        ambiente = "local"
-        env_path = f"envs/.{ambiente}.env"
-        env = load_dotenv(env_path)
-        if not env:
-            raise ValueError(f"Failed to load env, path used is {env_path}")
-        cls.dataset = VoxelDataset(os.environ.get("VOXEL_DATASET_ROOT"), sample_size=None)
+        cls.dataset = VoxelDataset("/data/voxel_dataset_v2", sample_size=-1)
 
     def test_voxel_copies_not_modifies(self):
         original_test_points = torch.clone(self.test_points)
@@ -71,7 +66,7 @@ class TestVoxelClass(unittest.TestCase):
             reflected_points = apply_symmetry(
                 points=test_voxel.points,
                 normal=normal,
-                d=d
+                offset=d
             ).sort(dim=0).values
             self.assertTrue(
                 torch.equal(
@@ -95,7 +90,7 @@ class TestVoxelClass(unittest.TestCase):
 
 
     def test_symmetries_between_points(self):
-        points, voxel, cp, syms = self.dataset[0]
+        _, _, points, voxel, cp, syms = self.dataset[0]
         for idx in range(syms.shape[0]):
             a_sym = syms[idx, :]
             normal, point = a_sym[0:3], a_sym[3::]
@@ -104,7 +99,7 @@ class TestVoxelClass(unittest.TestCase):
             reflected_points = apply_symmetry(
                 points=points,
                 normal=normal,
-                d=d
+                offset=d
             ).sort(dim=0).values
             boolean_mask = (torch.norm(reflected_points - original_points, dim=1) > 1e-6).sum()
             discrepancy = 1 - boolean_mask / (original_points.shape[0] * original_points.shape[1])
