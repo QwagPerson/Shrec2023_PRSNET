@@ -29,9 +29,6 @@ def visualize_prediction(pred_planes, points, real_planes):
     :param real_planes: M x 6
     """
     # Create symmetryPlane Objs
-    print(real_planes)
-    print(real_planes[0, 0:3].detach().numpy())
-    print(real_planes[0, 3::].detach().numpy())
     original_symmetries = [
         SymmetryPlane(
             normal=real_planes[idx, 0:3].detach().numpy(),
@@ -94,20 +91,16 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
     """
     prediction = [x.float() for x in prediction]
     fig_idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out = prediction
-    print(sample_points_out[0, 0:10, :])
-    print(sample_points[0, 0:10, :])
     batch_size = sample_points_out.shape[0]
 
     for batch_idx in range(batch_size):
         if visualize_unscaled:
-            print("bo")
             visualize_prediction(
                 pred_planes=y_out[batch_idx, :, :],
                 real_planes=y_true_out[batch_idx, :, :],
                 points=sample_points_out[batch_idx, :, :]
             )
         else:
-            print("ba")
             visualize_prediction(
                 pred_planes=y_pred[batch_idx, :, :],
                 real_planes=y_true[batch_idx, :, :],
