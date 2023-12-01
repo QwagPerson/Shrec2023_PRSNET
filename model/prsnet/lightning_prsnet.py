@@ -126,9 +126,11 @@ class LightingPRSNet(L.LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, _ = batch
         y_pred = self.net.forward(voxel_grids)
+        print(y_pred)
 
         y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
 
         y_pred = self.val_layer.forward(batch, y_pred)
+
         # fig_idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out = prediction
         return idx, y_pred, sample_points, y_pred, sample_points, torch.zeros_like(y_pred), torch.zeros_like(y_pred)

@@ -142,7 +142,7 @@ class SymLoss(nn.Module):
         is_voxel_filled = voxel_grid[x, y, z]
 
         # Calculate distance
-        distance = torch.norm(reflected_sample - cp, dim=1)# * is_voxel_filled
+        distance = torch.norm(reflected_sample - cp, dim=1) # * is_voxel_filled
 
         return distance.mean()
 

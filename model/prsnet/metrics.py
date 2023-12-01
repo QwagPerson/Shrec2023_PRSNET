@@ -105,8 +105,9 @@ def transform_representation(y_pred):
     for idx_bs in range(bs):
         for idx_head in range(n_heads):
             parameter_mag = torch.abs(y_pred[idx_bs, idx_head, 0:3])
-            max_val = torch.max(parameter_mag)
-            max_idx = torch.argmax(parameter_mag) + 3
+            max_idx = torch.argmax(parameter_mag) # A B C
+            max_val = y_pred[idx_bs, idx_head, max_idx]
+            max_idx  = max_idx  + 3
             y_pred_transformed[idx_bs, idx_head, max_idx] = - y_pred[idx_bs, idx_head, 3] / max_val
     # Add confidence
     y_pred_transformed[:, :, -1] = 1.0
