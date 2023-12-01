@@ -92,10 +92,11 @@ class ChamferLoss(nn.Module):
         for current_head_idx in range(amount_of_heads):
             predicted_planes_by_head = y_pred[:, current_head_idx, :]
             reflected_points = batch_apply_symmetry(sample_points, predicted_planes_by_head)
-            reflexion_loss += self.distance(
+            reflexion_loss += self.distance.forward(
                 sample_points, reflected_points,
-                batch_reduction="mean", point_reduction="mean",
-                bidirectional=True)
+                batch_reduction="sum", point_reduction="sum",
+                bidirectional=True
+            )
 
         return reflexion_loss + self.reg_coef * regularization_loss.sum()
 

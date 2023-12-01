@@ -1,4 +1,6 @@
 import torch
+
+from model.prsnet.postprocessing import PlaneValidator
 from model.prsnet.prs_net import PRSNet
 from model.prsnet.losses import SymLoss, ChamferLoss
 from model.prsnet.metrics import get_phc, undo_transform_representation
@@ -70,6 +72,7 @@ class LightingPRSNet(L.LightningModule):
         elif loss_used == "symloss":
             self.loss_fn = SymLoss(reg_coef)
         self.loss_used = loss_used
+        self.val_layer = PlaneValidator()
         self.save_hyperparameters(ignore=["net", "loss_fn"])
 
     def configure_optimizers(self):
@@ -121,16 +124,11 @@ class LightingPRSNet(L.LightningModule):
         self.log("out_test_phc", out_test_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
-        idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
+        idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, _ = batch
         y_pred = self.net.forward(voxel_grids)
 
-        # Normalize y_pred
         y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
 
-        y_pred = transform_representation(y_pred)
-
-        y_out = reverse_plane_scaling_transformation(y_pred, transformation_params)
-        y_true_out = reverse_plane_scaling_transformation(y_true, transformation_params)
-        sample_points_out = reverse_points_scaling_transformation(sample_points, transformation_params)
-
-        return idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out
+        y_pred = self.val_layer.forward(batch, y_pred)
+        # fig_idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out = prediction
+        return idx, y_pred, sample_points, y_pred, sample_points, torch.zeros_like(y_pred), torch.zeros_like(y_pred)

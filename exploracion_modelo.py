@@ -64,7 +64,7 @@ def visualize_prediction(pred_planes, points, real_planes):
             sym_plane.coords,
             sym_plane.trianglesBase,
             smooth_shade=True,
-            enabled=True,
+            enabled=False,
         )
 
     for idx, sym_plane in enumerate(predicted_symmetries):
@@ -75,7 +75,6 @@ def visualize_prediction(pred_planes, points, real_planes):
             smooth_shade=True,
             enabled=False,
         )
-
 
     for idx, ref_points in enumerate(reflected_points):
         ps.register_point_cloud(f"reflected_points_{idx}", ref_points.detach().numpy(), enabled=False, )
@@ -94,6 +93,7 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
     batch_size = sample_points_out.shape[0]
 
     for batch_idx in range(batch_size):
+        print(y_out[batch_idx, :, -2::])
         if visualize_unscaled:
             visualize_prediction(
                 pred_planes=y_out[batch_idx, :, :],
@@ -113,19 +113,19 @@ if __name__ == "__main__":
     model = LightingPRSNet.load_from_checkpoint(MODEL_PATH)
     data_module = VoxelDataModule(
         test_data_path="/data/voxel_dataset_v2",
+        predict_data_path="/data/voxel_dataset_v2",
         train_val_split=1,
         batch_size=1,
-        sample_size=-1,
+        sample_size=1,
         shuffle=False
     )
-    trainer = Trainer(enable_progress_bar=False)
+    trainer = Trainer(enable_progress_bar=True)
     predictions_results = trainer.predict(model, data_module)
+
     for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=False)
 
     for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=True)
 
-    trainer.test(model, data_module)
-
-
+    # trainer.test(model, data_module)

@@ -11,7 +11,7 @@ class VoxelDataModule(L.LightningDataModule):
     def __init__(self,
                  train_data_path: str = "/path/to/train_data",
                  test_data_path: str = "/path/to/test_data",
-                 predict_data_path: str = "/path/to/test_data",
+                 predict_data_path: str = "/path/to/predict_data",
                  train_val_split: float = 0.9,
                  sample_size: int = 1024,
                  batch_size: int = 32,
