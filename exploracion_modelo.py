@@ -80,12 +80,6 @@ def visualize_prediction(pred_planes, points, real_planes):
 
     for idx, ref_points in enumerate(reflected_points):
         ps.register_point_cloud(f"reflected_points_{idx}", ref_points.detach().numpy(), enabled=False, )
-        distance = torch.linalg.norm(ref_points.mean(dim=0) - points.mean(dim=0))
-
-        print(f"{idx}, {ref_points.mean(dim=0)}, distance: {distance}")
-        print(f"Plano 4 utilizado {other_rep_pred_planes[idx, 0:4]}")
-        print(f"Plano 6 utilizado {pred_planes[idx, 0:6]}")
-
     ps.show()
 
 
@@ -100,7 +94,6 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
     batch_size = sample_points_out.shape[0]
 
     for batch_idx in range(batch_size):
-        print(y_out)
         if visualize_unscaled:
             visualize_prediction(
                 pred_planes=y_out[batch_idx, :, :],
@@ -116,23 +109,25 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
 
 
 if __name__ == "__main__":
-    MODEL_PATH = "modelos_interesantes/version_13_so_many_heads_omaigai/checkpoints/epoch=2-step=2532.ckpt"
+    MODEL_PATH = "modelos_interesantes/version_13_so_many_heads_omaigai/checkpoints/epoch=12-step=10972.ckpt"
     model = LightingPRSNet.load_from_checkpoint(MODEL_PATH)
     data_module = VoxelDataModule(
         test_data_path="/data/voxel_dataset_v2",
         predict_data_path="/data/voxel_dataset_v2",
         train_val_split=1,
         batch_size=1,
-        sample_size=2048,
+        sample_size=1024,
         shuffle=False
     )
-    trainer = Trainer(enable_progress_bar=True)
+    trainer = Trainer(enable_progress_bar=False)
+    trainer.test(model, data_module)
+
     predictions_results = trainer.predict(model, data_module)
 
     for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=False)
+        break
 
     for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=True)
-
-    #trainer.test(model, data_module)
+        break

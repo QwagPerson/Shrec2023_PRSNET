@@ -116,8 +116,7 @@ class LightingPRSNet(L.LightningModule):
 
         out_test_phc = get_phc(
             (idx, transformation_params, out_sample_points, voxel_grids, voxel_grids_cp, out_y_true),
-            out_y_pred
-        )
+            out_y_pred)
 
         self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("test_phc", test_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
@@ -126,7 +125,6 @@ class LightingPRSNet(L.LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, _ = batch
         y_pred = self.net.forward(voxel_grids)
-        print(y_pred)
 
         y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
 

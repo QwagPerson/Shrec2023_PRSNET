@@ -113,17 +113,12 @@ def get_distance_2_mass_center(batch, y_pred):
 
     for batch_idx in range(bs):
         center_of_mass = sample_points[batch_idx, :, :].mean(dim=0)
-        print("Centro real", center_of_mass)
         for current_head_idx in range(n_heads):
             curr_plane = y_pred[batch_idx, current_head_idx, :]
             curr_sample = sample_points[batch_idx, :, :]
 
             reflected_points = apply_symmetry(curr_sample, curr_plane[0:3], curr_plane[3])
             cm_reflected_points = reflected_points.mean(dim=0)
-            print("IDX cabezal", current_head_idx)
-            print("Plano 4 utilizado", curr_plane)
-            print("Plano 6 utilizado", transform_representation(curr_plane.unsqueeze(dim=0).unsqueeze(dim=0)))
-            print("Centro de masa reflejado", cm_reflected_points)
             center_of_mass_matrix[batch_idx, current_head_idx] = torch.linalg.norm(
                 center_of_mass - cm_reflected_points
             )
