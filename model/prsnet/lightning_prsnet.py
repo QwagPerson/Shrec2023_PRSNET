@@ -116,12 +116,10 @@ class LightingPRSNet(L.LightningModule):
 
         test_phc = get_phc(batch, y_pred, theta=self.phc_angle, eps_percent=self.phc_dist_percent)
 
-
         # Descaling
         out_sample_points = reverse_points_scaling_transformation(sample_points, transformation_params)
         out_y_pred = reverse_plane_scaling_transformation(y_pred[:, :, 0:6], transformation_params)
         out_y_true = reverse_plane_scaling_transformation(y_true, transformation_params)
-
 
         out_test_phc = get_phc(
             (idx, transformation_params, out_sample_points, voxel_grids, voxel_grids_cp, out_y_true),
@@ -130,15 +128,6 @@ class LightingPRSNet(L.LightningModule):
         self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("test_phc", test_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("out_test_phc", out_test_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
-
-        from exploracion_modelo import visualize_prediction_results
-        batch = idx, out_y_pred, out_sample_points, y_pred, sample_points, y_true, out_y_true
-        visualize_prediction_results(
-            batch,
-        )
-        visualize_prediction_results(
-            batch, False
-        )
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, _ = batch
