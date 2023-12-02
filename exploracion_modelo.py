@@ -111,6 +111,9 @@ if __name__ == "__main__":
     predictions_results = trainer.predict(model, data_module)
 
     for pred in predictions_results:
+        for x in pred:
+            print(x.shape)
+        exit(0)
         visualize_prediction_results(pred, visualize_unscaled=True)
         break
 

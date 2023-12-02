@@ -38,8 +38,8 @@ def reverse_plane_scaling_transformation(y_out, transformation_params):
     """
     y_out = y_out.clone()
 
-    mins = transformation_params[:, 0:3]  # B x 3
-    max_norms = transformation_params[:, 3]  # B
+    mins = transformation_params[:, 0:3].to(y_out.device)  # B x 3
+    max_norms = transformation_params[:, 3].to(y_out.device)  # B
 
     bs = y_out.shape[0]
     n_heads = y_out.shape[1]
@@ -136,7 +136,8 @@ class LightingPRSNet(L.LightningModule):
 
         # Descaling
         out_sample_points = reverse_points_scaling_transformation(sample_points, transformation_params)
-        out_y_pred = reverse_plane_scaling_transformation(y_pred[:, :, 0:6], transformation_params)
+        out_y_pred = y_pred.clone()
+        out_y_pred[:, :, 0:6] = reverse_plane_scaling_transformation(out_y_pred[:, :, 0:6], transformation_params)
 
         # fig_idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out = prediction
         return idx, out_y_pred, out_sample_points, y_pred, sample_points, torch.zeros_like(y_pred), torch.zeros_like(

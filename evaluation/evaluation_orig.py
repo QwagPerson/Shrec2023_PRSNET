@@ -202,11 +202,9 @@ if __name__ == "__main__":
     NN = 0
     value = opt.bins
     pr = [0.0 for i in range(value+1)]
-    print("Input list", input_list)
 
-    for inputRes in input_list:
+    for inputRes in tqdm.tqdm(input_list):
         resultModel = computeMetricsPerModel(inputRes, opt.bins, opt)
-        print(inputRes, resultModel["NN"])
 
         pr = [pr[i] + resultModel["pr"][i] for i in range(value+1)]
         MAP = MAP + resultModel["MAP"]

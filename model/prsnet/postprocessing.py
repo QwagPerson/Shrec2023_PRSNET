@@ -148,9 +148,9 @@ class PlaneValidator(nn.Module):
         y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
 
         y_pred_transformed = transform_representation_cm(y_pred, sample_points)
-        sde_matrix = self.sde_fn(batch, y_pred)  # B x N
+        sde_matrix = self.sde_fn(batch, y_pred).to(y_pred.device) # B x N
 
-        confidences = minmax_normalization(sde_matrix)
+        confidences = minmax_normalization(sde_matrix).to(y_pred.device)
 
         bs = y_pred.shape[0]
         n_heads = y_pred.shape[1]
