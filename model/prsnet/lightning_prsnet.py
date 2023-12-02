@@ -1,3 +1,5 @@
+import math
+
 import torch
 
 from model.prsnet.postprocessing import PlaneValidator
@@ -63,20 +65,24 @@ class LightingPRSNet(L.LightningModule):
                  use_bn: bool = True,
                  loss_used: str = "symloss",
                  reg_coef: float = 25.0,
+                 max_sde: float = 1e-3,
+                 angle_threshold: float = math.pi / 6,
                  ):
         super().__init__()
         self.name = name
         self.net = PRSNet(input_resolution, amount_of_heads, out_features, use_bn=use_bn)
-        if loss_used == "chamfer":
-            self.loss_fn = ChamferLoss(reg_coef)
-        elif loss_used == "symloss":
-            self.loss_fn = SymLoss(reg_coef)
+        # Could (should) be implemented using submodules
+        # https://lightning.ai/docs/pytorch/stable/cli/lightning_cli_intermediate_2.html
         self.loss_used = loss_used
-        self.val_layer = PlaneValidator()
+        if self.loss_used == "chamfer":
+            self.loss_fn = ChamferLoss(reg_coef)
+        elif self.loss_used == "symloss":
+            self.loss_fn = SymLoss(reg_coef)
+        self.val_layer = PlaneValidator(sde_threshold=max_sde)
         self.save_hyperparameters(ignore=["net", "loss_fn"])
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.Adam(self.parameters())
         return optimizer
 
     def training_step(self, batch, batch_idx, dataloader_idx=0):
@@ -84,10 +90,9 @@ class LightingPRSNet(L.LightningModule):
         y_pred = self.net.forward(voxel_grids)
 
         loss = self.loss_fn.forward(batch, y_pred)
-        train_phc = get_phc(batch, y_pred)
 
         self.log("train_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
-        self.log("train_phc", train_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+
         return loss
 
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
@@ -125,8 +130,6 @@ class LightingPRSNet(L.LightningModule):
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, _ = batch
         y_pred = self.net.forward(voxel_grids)
-
-        y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
 
         y_pred = self.val_layer.forward(batch, y_pred)
 

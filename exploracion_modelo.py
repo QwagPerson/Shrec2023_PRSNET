@@ -1,3 +1,4 @@
+import math
 import pathlib
 import random
 import os
@@ -20,7 +21,8 @@ from torch.utils.data import DataLoader, random_split
 from model.prsnet.lightning_prsnet import LightingPRSNet
 from model.prsnet.losses import ChamferLoss, batch_apply_symmetry, apply_symmetry
 from setup.setup_voxel_dataset.symmetry_plane import SymmetryPlane
-from model.prsnet.metrics import get_phc, transform_representation, undo_transform_representation, get_diagonals_length
+from model.prsnet.metrics import get_phc, transform_representation, undo_transform_representation, get_diagonals_length, \
+    get_angle
 from model.prsnet.lightning_prsnet import reverse_points_scaling_transformation, reverse_plane_scaling_transformation
 
 
@@ -65,7 +67,6 @@ def visualize_prediction(pred_planes, points, real_planes):
             f"original_sym_plane_{idx}",
             sym_plane.coords,
             sym_plane.trianglesBase,
-            smooth_shade=True,
             enabled=False,
         )
 
@@ -74,8 +75,8 @@ def visualize_prediction(pred_planes, points, real_planes):
             f"predicted_sym_plane_{idx}",
             sym_plane.coords,
             sym_plane.trianglesBase,
-            smooth_shade=True,
-            enabled=False,
+            enabled=True,
+            transparency=0.7
         )
 
     for idx, ref_points in enumerate(reflected_points):
@@ -91,9 +92,12 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
     """
     prediction = [x.float() for x in prediction]
     fig_idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out = prediction
+
+
     batch_size = sample_points_out.shape[0]
 
     for batch_idx in range(batch_size):
+        print(y_out[batch_idx, :, :])
         if visualize_unscaled:
             visualize_prediction(
                 pred_planes=y_out[batch_idx, :, :],
@@ -109,25 +113,25 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
 
 
 if __name__ == "__main__":
-    MODEL_PATH = "modelos_interesantes/version_13_so_many_heads_omaigai/checkpoints/epoch=12-step=10972.ckpt"
-    model = LightingPRSNet.load_from_checkpoint(MODEL_PATH)
+    MODEL_PATH = "modelos_interesantes/version_13_so_many_heads_omaigai/checkpoints/epoch=14-step=12660.ckpt"
+    model = LightingPRSNet.load_from_checkpoint(MODEL_PATH, max_sde=0.5, angle_threshold=30)
     data_module = VoxelDataModule(
         test_data_path="/data/voxel_dataset_v2",
         predict_data_path="/data/voxel_dataset_v2",
         train_val_split=1,
-        batch_size=1,
-        sample_size=1024,
+        batch_size=6,
+        sample_size=512,
         shuffle=False
     )
-    trainer = Trainer(enable_progress_bar=False)
-    trainer.test(model, data_module)
+    trainer = Trainer(enable_progress_bar=True)
 
     predictions_results = trainer.predict(model, data_module)
 
     for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=False)
-        break
 
-    for pred in predictions_results:
+"""    for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=True)
-        break
+        break"""
+
+    #trainer.test(model, data_module)

@@ -7,6 +7,22 @@ from model.prsnet.losses import SymLoss, apply_symmetry
 from chamferdist import ChamferDistance
 
 
+def minmax_normalization(sde):
+    """
+
+    :param sde: Shape B x N
+    :return: Shape B x N
+    """
+    confidences = sde.clone()
+    bs = sde.shape[0]
+    for bidx in range(bs):
+        curr_confidences = confidences[bidx, :]
+        confidences[bidx, :] = (curr_confidences - curr_confidences.min())
+        confidences[bidx, :] = confidences[bidx, :] / torch.linalg.norm(curr_confidences.max())
+
+    return 1 - confidences
+
+
 def chamfer_adapter(batch, y_pred):
     idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, _ = batch
     chamfer_matrix = torch.zeros((y_pred.shape[0], y_pred.shape[1]))
@@ -53,45 +69,28 @@ def symloss_adapter(batch, y_pred):
 
 
 class PredictedPlane:
-    def __init__(self, normal, point, confidence, sde, cm):
+    def __init__(self, normal, point, confidence, sde):
         self.normal = normal
         self.normal = normal / torch.linalg.norm(normal)
         self.point = point
         self.confidence = confidence
         self.sde = sde
-        self.cm = cm
 
-    def is_close(self, another_plane) -> bool:
-        angle = torch.arccos(torch.dot(self.normal, another_plane.normal))
-        return angle < math.pi / 6
+    def is_close(self, another_plane, angle_threshold=30) -> bool:
+        angle = torch.arccos(torch.dot(self.normal, another_plane.normal)).item() * 180 / math.pi
+        return (angle < angle_threshold) | (180 - angle < angle_threshold)
 
     def to_tensor(self) -> torch.tensor:
         return torch.cat(
-            (self.normal, self.point, self.confidence.unsqueeze(dim=0), self.sde.unsqueeze(dim=0), self.cm.unsqueeze(dim=0)),
+            (self.normal, self.point, self.confidence.unsqueeze(dim=0), self.sde.unsqueeze(dim=0)),
             dim=0)
 
 
-def minmax_normalization(sde):
-    """
-
-    :param sde: Shape B x N
-    :return: Shape B x N
-    """
-    confidences = sde.clone()
-    bs = sde.shape[0]
-    for bidx in range(bs):
-        curr_confidences = confidences[bidx, :]
-        confidences[bidx, :] = (curr_confidences - curr_confidences.min())
-        confidences[bidx, :] = confidences[bidx, :] / torch.linalg.norm(curr_confidences.max())
-
-    return 1 - confidences
-
-
-def remove_duplicated_pred_planes(curr_head_predictions):
+def remove_duplicated_pred_planes(curr_head_predictions, angle_threshold):
     pop_plane_idx = []
     for a_idx, a_plane in enumerate(curr_head_predictions):
         for b_idx, b_plane in enumerate(curr_head_predictions):
-            if a_idx != b_idx and a_plane.is_close(b_plane):
+            if a_idx != b_idx and a_plane.is_close(b_plane, angle_threshold):
                 if a_plane.sde > b_plane.sde:
                     pop_plane_idx.append(a_idx)
                 else:
@@ -104,6 +103,7 @@ def remove_duplicated_pred_planes(curr_head_predictions):
     return curr_head_predictions
 
 
+# Unused
 def get_distance_2_mass_center(batch, y_pred):
     idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, _ = batch
     center_of_mass_matrix = torch.zeros((y_pred.shape[0], y_pred.shape[1]))
@@ -127,19 +127,27 @@ def get_distance_2_mass_center(batch, y_pred):
 
 
 class PlaneValidator(nn.Module):
-    def __init__(self, sde_fn=None):
+    def __init__(self, sde_fn: str = None, sde_threshold: float = 1e-2, angle_threshold: float = 30):
         super(PlaneValidator, self).__init__()
-        # self.sde_fn = symloss_adapter
-        self.sde_fn = chamfer_adapter
+        if sde_fn == "symloss" or sde_fn is None:
+            self.sde_fn = symloss_adapter
+        elif sde_fn =="chamfer":
+            self.sde_fn = chamfer_adapter
+        else:
+            raise ValueError("Bad name sde_fn")
+        self.sde_threshold = sde_threshold
+        self.angle_threshold = angle_threshold
 
-    def forward(self, batch, y_pred, sde_threshold=1e3):
+    def forward(self, batch, y_pred):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, _ = batch
 
-        y_pred_transformed = transform_representation(y_pred)
-        sde = self.sde_fn(batch, y_pred)  # B x N
-        center_of_mass = get_distance_2_mass_center(batch, y_pred)
+        # We make sure y_pred is normalized
+        y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
 
-        confidences = minmax_normalization(sde)
+        y_pred_transformed = transform_representation(y_pred)
+        sde_matrix = self.sde_fn(batch, y_pred)  # B x N
+
+        confidences = minmax_normalization(sde_matrix)
 
         bs = y_pred.shape[0]
         n_heads = y_pred.shape[1]
@@ -148,32 +156,28 @@ class PlaneValidator(nn.Module):
 
         for bidx in range(bs):
             curr_head_predictions = []
-            curr_figure_idx = idx[bidx].item()
-
             for nidx in range(n_heads):
                 curr_plane = y_pred_transformed[bidx, nidx, :]
-                curr_sde = sde[bidx, nidx]
+                curr_sde = sde_matrix[bidx, nidx]
                 curr_confidence = confidences[bidx, nidx]
-                curr_cm = center_of_mass[bidx, nidx]
                 plane_obj = PredictedPlane(
                     normal=curr_plane[0:3],
                     point=curr_plane[3:6],
                     confidence=curr_confidence,
                     sde=curr_sde,
-                    cm=curr_cm
                 )
                 curr_head_predictions.append(plane_obj)
 
-            curr_head_predictions = [x for x in curr_head_predictions if x.sde <= sde_threshold]
-
-            curr_head_predictions = [x for x in curr_head_predictions if x.cm <= 1e-2]
+            curr_head_predictions = [x for x in curr_head_predictions if x.sde <= self.sde_threshold]
 
             curr_head_predictions.sort(key=lambda x: x.confidence, reverse=True)
 
-            curr_head_predictions = remove_duplicated_pred_planes(curr_head_predictions)
+            curr_head_predictions = remove_duplicated_pred_planes(curr_head_predictions, self.angle_threshold)
 
             curr_head_predictions = [x.to_tensor() for x in curr_head_predictions]
+
             if len(curr_head_predictions) == 0:
+                # To avoid crashing at rnn_pad_sequence
                 curr_head_predictions = [
                     torch.zeros(8)
                 ]
@@ -183,4 +187,5 @@ class PlaneValidator(nn.Module):
             predictions.append(curr_head_predictions)
 
         y_pred = torch.nn.utils.rnn.pad_sequence(predictions, batch_first=True)
+
         return y_pred
