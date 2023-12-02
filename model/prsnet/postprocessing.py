@@ -1,10 +1,11 @@
 import math
 
-import torch.nn as nn
 import torch
-from model.prsnet.metrics import transform_representation
-from model.prsnet.losses import SymLoss, apply_symmetry
+import torch.nn as nn
 from chamferdist import ChamferDistance
+
+from model.prsnet.losses import SymLoss, apply_symmetry
+from model.prsnet.metrics import transform_representation_cm
 
 
 def minmax_normalization(sde):
@@ -141,10 +142,12 @@ class PlaneValidator(nn.Module):
     def forward(self, batch, y_pred):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, _ = batch
 
+        y_pred = y_pred.clone()
+
         # We make sure y_pred is normalized
         y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
 
-        y_pred_transformed = transform_representation(y_pred)
+        y_pred_transformed = transform_representation_cm(y_pred, sample_points)
         sde_matrix = self.sde_fn(batch, y_pred)  # B x N
 
         confidences = minmax_normalization(sde_matrix)

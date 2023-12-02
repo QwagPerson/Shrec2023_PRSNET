@@ -1,13 +1,10 @@
-import math
-
+import lightning as L
 import torch
 
+from model.prsnet.losses import SymLoss, ChamferLoss
+from model.prsnet.metrics import get_phc
 from model.prsnet.postprocessing import PlaneValidator
 from model.prsnet.prs_net import PRSNet
-from model.prsnet.losses import SymLoss, ChamferLoss
-from model.prsnet.metrics import get_phc, undo_transform_representation
-import lightning as L
-from model.prsnet.metrics import transform_representation
 
 
 def reverse_points_scaling_transformation(points, transformation_params):
@@ -35,9 +32,9 @@ def reverse_points_scaling_transformation(points, transformation_params):
 def reverse_plane_scaling_transformation(y_out, transformation_params):
     """
 
-    :param y_out: B x N x 7
+    :param y_out: B x N x 8
     :param transformation_params: B x 4
-    :return: y_out where the point of each plane has its scaling reversed.
+    :return: y_out where the point of each plane has its scaling reversed. B x N x 7
     """
     y_out = y_out.clone()
 
@@ -66,7 +63,9 @@ class LightingPRSNet(L.LightningModule):
                  loss_used: str = "symloss",
                  reg_coef: float = 25.0,
                  max_sde: float = 1e-3,
-                 angle_threshold: float = math.pi / 6,
+                 angle_threshold: float = 30,
+                 phc_angle: float = 1,
+                 phc_dist_percent: float = 0.01,
                  ):
         super().__init__()
         self.name = name
@@ -79,6 +78,9 @@ class LightingPRSNet(L.LightningModule):
         elif self.loss_used == "symloss":
             self.loss_fn = SymLoss(reg_coef)
         self.val_layer = PlaneValidator(sde_threshold=max_sde)
+        self.angle_threshold = angle_threshold,
+        self.phc_angle = phc_angle
+        self.phc_dist_percent = phc_dist_percent
         self.save_hyperparameters(ignore=["net", "loss_fn"])
 
     def configure_optimizers(self):
@@ -100,7 +102,7 @@ class LightingPRSNet(L.LightningModule):
         y_pred = self.net.forward(voxel_grids)
 
         loss = self.loss_fn.forward(batch, y_pred)
-        val_phc = get_phc(batch, y_pred)
+        val_phc = get_phc(batch, y_pred, theta=self.phc_angle, eps_percent=self.phc_dist_percent)
 
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("val_phc", val_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
@@ -110,28 +112,43 @@ class LightingPRSNet(L.LightningModule):
         y_pred = self.net.forward(voxel_grids)
 
         loss = self.loss_fn.forward(batch, y_pred)
-        test_phc = get_phc(batch, y_pred)
+        y_pred = self.val_layer.forward(batch, y_pred)
 
+        test_phc = get_phc(batch, y_pred, theta=self.phc_angle, eps_percent=self.phc_dist_percent)
+
+
+        # Descaling
         out_sample_points = reverse_points_scaling_transformation(sample_points, transformation_params)
-        out_y_pred = transform_representation(y_pred)
-        out_y_pred = reverse_plane_scaling_transformation(out_y_pred, transformation_params)
-        out_y_pred = undo_transform_representation(out_y_pred)
-
+        out_y_pred = reverse_plane_scaling_transformation(y_pred[:, :, 0:6], transformation_params)
         out_y_true = reverse_plane_scaling_transformation(y_true, transformation_params)
+
 
         out_test_phc = get_phc(
             (idx, transformation_params, out_sample_points, voxel_grids, voxel_grids_cp, out_y_true),
-            out_y_pred)
+            out_y_pred, theta=self.phc_angle, eps_percent=self.phc_dist_percent)
 
         self.log("test_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("test_phc", test_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("out_test_phc", out_test_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
+        from exploracion_modelo import visualize_prediction_results
+        batch = idx, out_y_pred, out_sample_points, y_pred, sample_points, y_true, out_y_true
+        visualize_prediction_results(
+            batch,
+        )
+        visualize_prediction_results(
+            batch, False
+        )
+
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, _ = batch
         y_pred = self.net.forward(voxel_grids)
-
         y_pred = self.val_layer.forward(batch, y_pred)
 
+        # Descaling
+        out_sample_points = reverse_points_scaling_transformation(sample_points, transformation_params)
+        out_y_pred = reverse_plane_scaling_transformation(y_pred[:, :, 0:6], transformation_params)
+
         # fig_idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out = prediction
-        return idx, y_pred, sample_points, y_pred, sample_points, torch.zeros_like(y_pred), torch.zeros_like(y_pred)
+        return idx, out_y_pred, out_sample_points, y_pred, sample_points, torch.zeros_like(y_pred), torch.zeros_like(
+            y_pred)

@@ -5,7 +5,6 @@ import pathlib
 
 from model.prsnet.lightning_prsnet import LightingPRSNet
 from dataset.lightning_voxel_dataset import VoxelDataModule
-from model.prsnet.metrics import transform_representation
 from argparse import ArgumentParser
 
 

@@ -90,6 +90,36 @@ def undo_transform_representation(y_pred):
     return y_pred_transformed
 
 
+def transform_representation_cm(y_pred, points):
+    """
+    CM porque toma el punto más cercano en el plano del centro de masa de los puntos
+    :param y_pred: B x N x 4
+    :param points B x S x 3
+    :return: B x N x 7
+    """
+    # get center of mass
+    cm = points.mean(dim=1)
+
+    y_pred_transformed = torch.zeros((y_pred.shape[0], y_pred.shape[1], 7), device=y_pred.device)
+    # Copy normals
+    y_pred_transformed[:, :, 0:3] = y_pred[:, :, 0:3]
+
+    # Get point
+    bs = y_pred.shape[0]
+    n_heads = y_pred.shape[1]
+    for idx_bs in range(bs):
+        for idx_head in range(n_heads):
+            normal = y_pred[idx_bs, idx_head, 0:3]
+            offset = y_pred[idx_bs, idx_head, 3]
+            point = cm[idx_bs, :]
+            signed_distance = torch.dot(point, normal) + offset
+            point_in_plane = point - (signed_distance * normal)
+            y_pred_transformed[idx_bs, idx_head, 3:6] = point_in_plane
+    # Add confidence
+    y_pred_transformed[:, :, -1] = 1.0
+    return y_pred_transformed
+
+
 def transform_representation(y_pred):
     """
 
@@ -105,9 +135,9 @@ def transform_representation(y_pred):
     for idx_bs in range(bs):
         for idx_head in range(n_heads):
             parameter_mag = torch.abs(y_pred[idx_bs, idx_head, 0:3])
-            max_idx = torch.argmax(parameter_mag) # A B C
+            max_idx = torch.argmax(parameter_mag)  # A B C
             max_val = y_pred[idx_bs, idx_head, max_idx]
-            max_idx  = max_idx  + 3
+            max_idx = max_idx + 3
             y_pred_transformed[idx_bs, idx_head, max_idx] = - y_pred[idx_bs, idx_head, 3] / max_val
     # Add confidence
     y_pred_transformed[:, :, -1] = 1.0
@@ -135,7 +165,7 @@ def get_phc(batch, y_pred: torch.Tensor, theta=1, eps_percent=0.01):
     # Normalize y_pred
     y_pred[:, :, 0:3] = y_pred[:, :, 0:3] / torch.linalg.norm(y_pred[:, :, 0:3], dim=2).unsqueeze(2).repeat(1, 1, 3)
     # Transform representation of plane B x N x 4 -> B x N x 7
-    y_pred = transform_representation(y_pred)
+    y_pred = transform_representation_cm(y_pred, sample_points)
 
     # Sort y_pred by confidence
     confidences = y_pred[:, :, -1].sort(descending=True).indices
@@ -143,11 +173,20 @@ def get_phc(batch, y_pred: torch.Tensor, theta=1, eps_percent=0.01):
         y_pred[x, :, :] = y_pred[x, confidences[x, :], :]
 
     # Select only the first plane for every y_pred in B
+    for nidx in range(y_pred.shape[1]):
+        aa = y_pred[:, nidx, :].unsqueeze(1)
+
+        # Check if they match with any in y_true in B
+        matches = match_planes(aa, y_true, theta, eps)
+        # Applying any through each prediction
+        matches = matches.any(dim=1)
+
     y_pred = y_pred[:, 0, :].unsqueeze(1)
 
     # Check if they match with any in y_true in B
     matches = match_planes(y_pred, y_true, theta, eps)
     # Applying any through each prediction
     matches = matches.any(dim=1)
+
     # Return Match percent
     return matches.sum().item() / torch.numel(matches)
