@@ -78,6 +78,7 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
     batch_size = sample_points_out.shape[0]
 
     for batch_idx in range(batch_size):
+        print(y_out[batch_idx, :, -1])
         if visualize_unscaled:
             visualize_prediction(
                 pred_planes=y_out[batch_idx, :, :],
@@ -93,9 +94,10 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
 
 
 if __name__ == "__main__":
+    #  max_sde=0.023, angle_threshold=10, phc_angle=1, phc_dist_percent=0.01
     MODEL_PATH = "modelos_interesantes/version_13_so_many_heads_omaigai/checkpoints/epoch=14-step=12660.ckpt"
     model = LightingPRSNet.load_from_checkpoint(MODEL_PATH,
-                                                max_sde=0.5, angle_threshold=10,
+                                                max_sde=0.023, angle_threshold=10,
                                                 phc_angle=1, phc_dist_percent=0.01
                                                 )
     data_module = VoxelDataModule(
@@ -111,13 +113,9 @@ if __name__ == "__main__":
     predictions_results = trainer.predict(model, data_module)
 
     for pred in predictions_results:
-        for x in pred:
-            print(x.shape)
-        exit(0)
         visualize_prediction_results(pred, visualize_unscaled=True)
-        break
 
-    for pred in predictions_results:
+    """    for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=False)
-        break
+        break"""
 

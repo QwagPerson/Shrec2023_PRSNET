@@ -77,7 +77,7 @@ class LightingPRSNet(L.LightningModule):
             self.loss_fn = ChamferLoss(reg_coef)
         elif self.loss_used == "symloss":
             self.loss_fn = SymLoss(reg_coef)
-        self.val_layer = PlaneValidator(sde_threshold=max_sde)
+        self.val_layer = PlaneValidator(sde_threshold=max_sde, angle_threshold=angle_threshold)
         self.angle_threshold = angle_threshold,
         self.phc_angle = phc_angle
         self.phc_dist_percent = phc_dist_percent
@@ -100,12 +100,23 @@ class LightingPRSNet(L.LightningModule):
     def validation_step(self, batch, batch_idx, dataloader_idx=0):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
         y_pred = self.net.forward(voxel_grids)
-
         loss = self.loss_fn.forward(batch, y_pred)
+
+        y_pred = self.val_layer.forward(batch, y_pred)
         val_phc = get_phc(batch, y_pred, theta=self.phc_angle, eps_percent=self.phc_dist_percent)
+
+        # Descaling
+        out_sample_points = reverse_points_scaling_transformation(sample_points, transformation_params)
+        out_y_pred = reverse_plane_scaling_transformation(y_pred[:, :, 0:6], transformation_params)
+        out_y_true = reverse_plane_scaling_transformation(y_true, transformation_params)
+
+        out_test_phc = get_phc(
+            (idx, transformation_params, out_sample_points, voxel_grids, voxel_grids_cp, out_y_true),
+            out_y_pred, theta=self.phc_angle, eps_percent=self.phc_dist_percent)
 
         self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
         self.log("val_phc", val_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log("out_val_phc", out_test_phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
     def test_step(self, batch, batch_idx):
         idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
