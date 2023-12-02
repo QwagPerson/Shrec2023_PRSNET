@@ -42,7 +42,7 @@ def chamfer_adapter(batch, y_pred):
 
             chamfer_matrix[batch_idx, current_head_idx] = distance.forward(
                 reflected_points.unsqueeze(dim=0), curr_sample.unsqueeze(dim=0),
-                batch_reduction="sum", point_reduction="sum",
+                batch_reduction="mean", point_reduction="mean",
                 bidirectional=True
             )
 
@@ -97,7 +97,7 @@ def remove_duplicated_pred_planes(curr_head_predictions, angle_threshold):
                 else:
                     pop_plane_idx.append(b_idx)
 
-    pop_plane_idx = list(set(pop_plane_idx))
+    pop_plane_idx = sorted(list(set(pop_plane_idx)))
     # Reverse to not mess up idx matching
     for idx in reversed(pop_plane_idx):
         curr_head_predictions.pop(idx)

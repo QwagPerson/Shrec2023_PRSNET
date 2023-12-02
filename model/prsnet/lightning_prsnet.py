@@ -64,6 +64,7 @@ class LightingPRSNet(L.LightningModule):
                  reg_coef: float = 25.0,
                  max_sde: float = 1e-3,
                  angle_threshold: float = 30,
+                 sde_fn : str = "symloss",
                  phc_angle: float = 1,
                  phc_dist_percent: float = 0.01,
                  ):
@@ -77,7 +78,8 @@ class LightingPRSNet(L.LightningModule):
             self.loss_fn = ChamferLoss(reg_coef)
         elif self.loss_used == "symloss":
             self.loss_fn = SymLoss(reg_coef)
-        self.val_layer = PlaneValidator(sde_threshold=max_sde, angle_threshold=angle_threshold)
+        self.val_layer = PlaneValidator(sde_fn=sde_fn, sde_threshold=max_sde, angle_threshold=angle_threshold)
+        self.sde_fn = sde_fn
         self.angle_threshold = angle_threshold,
         self.phc_angle = phc_angle
         self.phc_dist_percent = phc_dist_percent
@@ -151,5 +153,5 @@ class LightingPRSNet(L.LightningModule):
         out_y_pred[:, :, 0:6] = reverse_plane_scaling_transformation(out_y_pred[:, :, 0:6], transformation_params)
 
         # fig_idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out = prediction
-        return idx, out_y_pred, out_sample_points, y_pred, sample_points, torch.zeros_like(y_pred), torch.zeros_like(
+        return idx, out_y_pred, out_sample_points, y_pred, sample_points, _, torch.zeros_like(
             y_pred)

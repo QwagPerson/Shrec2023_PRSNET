@@ -94,12 +94,9 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
 
 
 if __name__ == "__main__":
-    #  max_sde=0.023, angle_threshold=10, phc_angle=1, phc_dist_percent=0.01
-    MODEL_PATH = "modelos_interesantes/version_13_so_many_heads_omaigai/checkpoints/epoch=14-step=12660.ckpt"
-    model = LightingPRSNet.load_from_checkpoint(MODEL_PATH,
-                                                max_sde=0.023, angle_threshold=10,
-                                                phc_angle=1, phc_dist_percent=0.01
-                                                )
+    #  max_sde=0.023, angle_threshold=10, sde_fn="chamfer", phc_angle=1, phc_dist_percent=0.01
+    MODEL_PATH = "modelos_interesantes/version_25_continuacion24_menosreg/checkpoints/epoch=11-step=10128.ckpt"
+    model = LightingPRSNet.load_from_checkpoint(MODEL_PATH, max_sde=0.02)
     data_module = VoxelDataModule(
         test_data_path="/data/voxel_dataset_v2",
         predict_data_path="/data/voxel_dataset_v2",
@@ -113,9 +110,10 @@ if __name__ == "__main__":
     predictions_results = trainer.predict(model, data_module)
 
     for pred in predictions_results:
-        visualize_prediction_results(pred, visualize_unscaled=True)
+        visualize_prediction_results(pred, visualize_unscaled=False)
 
     """    for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=False)
         break"""
 
+    # trainer.test(model, data_module)

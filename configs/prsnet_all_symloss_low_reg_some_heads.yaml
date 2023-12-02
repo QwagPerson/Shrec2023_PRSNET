@@ -13,7 +13,7 @@ trainer:
   callbacks:
     - class_path: lightning.pytorch.callbacks.EarlyStopping
       init_args:
-        patience: 3
+        patience: 5
         monitor: val_loss
   fast_dev_run: false
   max_epochs: null
@@ -48,14 +48,14 @@ trainer:
   reload_dataloaders_every_n_epochs: 0
   default_root_dir: ./remote_logs
 model:
-  name: Testing the waters prsnet
+  name: Testeando symloss con poca regularizacion y cabezas
   input_resolution: 32
-  amount_of_heads: 8
+  amount_of_heads: 6
   out_features: 4
   use_bn: true
   loss_used: symloss
-  reg_coef: 1.0
-  max_sde: 0.5
+  reg_coef: 0.5
+  max_sde: 0.02
   angle_threshold: 10.0
   sde_fn: symloss
   phc_angle: 1.0
@@ -66,7 +66,7 @@ data:
   predict_data_path: /data/gsanteli/voxel_dataset_test_32_full_v2
   train_val_split: 0.9
   sample_size: 1024
-  batch_size: 16
+  batch_size: 64
   shuffle: true
   n_workers: 8
 ckpt_path: null

@@ -55,7 +55,7 @@ class VoxelDataModule(L.LightningDataModule):
             self.voxel_predict = VoxelDataset(
                 dataset_root=self.predict_data_path,
                 sample_size=self.sample_size,
-                is_predict_dataset=True
+                is_predict_dataset=False
             )
 
     def train_dataloader(self):

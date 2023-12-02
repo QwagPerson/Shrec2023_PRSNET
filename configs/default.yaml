@@ -50,6 +50,7 @@ model:
   reg_coef: 25.0
   max_sde: 0.001
   angle_threshold: 30.0
+  sde_fn: symloss
   phc_angle: 1.0
   phc_dist_percent: 0.01
 data:
