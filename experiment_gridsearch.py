@@ -22,8 +22,8 @@ PATIENCE = 3
 N_FOLDS = 5
 MAX_EPOCHS = 100
 DATA_PATH = "/data/gsanteli/voxel_dataset_32_full"
-CARPETA_RESUMEN_RESULTAD0S = "resultados_remotos_3_dic"
-DEF_DIR = "/remote_test_3_dic"
+CARPETA_RESUMEN_RESULTADOS = "resultados_remotos_3_dic"
+DEF_DIR = "remote_test_3_dic"
 
 ###################################
 # 1. Grid Search Parameters ranges
@@ -122,7 +122,7 @@ def run_experiment(
 ############################################
 # 2. Corremos los experimentos en la grilla
 ############################################
-folder_path = create_or_get(CARPETA_RESUMEN_RESULTAD0S)
+folder_path = create_or_get(CARPETA_RESUMEN_RESULTADOS)
 
 for reg_coef in REG_COEF_RANGE:
     for n_heads in AMOUNT_OF_HEADS_RANGE:
