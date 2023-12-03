@@ -1,0 +1,14 @@
+name: Good Prs Net
+input_resolution: 32
+amount_of_heads: 27
+out_features: 4
+use_bn: true
+loss_used: symloss
+reg_coef: 5.0
+train_data_path: /data/gsanteli/voxel_dataset_32_full
+test_data_path: /data/gsanteli/voxel_dataset_test_32_full_v2
+train_val_split: 0.9
+sample_size: 1024
+batch_size: 32
+shuffle: true
+n_workers: 8
