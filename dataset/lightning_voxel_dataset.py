@@ -1,7 +1,5 @@
-import random
 
 import lightning as L
-import torch
 
 from torch.utils.data import random_split, DataLoader
 from dataset.voxel_dataset import VoxelDataset, collate_fn
