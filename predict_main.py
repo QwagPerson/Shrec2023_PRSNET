@@ -14,7 +14,7 @@ def save_prediction(pred, path):
     n_heads = y_out.shape[1]
 
     # Drop sde
-    y_out = y_out.squeeze()[:, 0:7]
+    y_out = y_out.squeeze(0)[:, 0:7]
 
     pred = y_out.numpy().reshape((n_heads, 7))
     with open(os.path.join(path, f"points{idx}_res.txt"), "w") as f:

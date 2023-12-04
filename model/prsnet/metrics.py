@@ -44,8 +44,16 @@ def match(y_pred, y_true, theta, eps):
     distances = torch.abs(torch.einsum('bnd,bnd->bn', points_pred, normals_true) + ds)  # B x N
     angles = get_angle(normals_pred, normals_true)  # B x N
 
+
     angles_match = (angles < theta) | (180 - angles < theta)
     distances_match = distances < eps
+
+    print("===")
+    print("y_pred", undo_transform_representation(y_pred))
+    print("y_true", undo_transform_representation(y_true))
+    print("distances", distances, "<", eps, distances_match)
+    print("angles", angles, "<", theta, angles_match)
+    print("===")
 
     return angles_match & distances_match
 
@@ -171,15 +179,6 @@ def get_phc(batch, y_pred: torch.Tensor, theta=1, eps_percent=0.01):
     confidences = y_pred[:, :, -1].sort(descending=True).indices
     for x in range(confidences.shape[0]):
         y_pred[x, :, :] = y_pred[x, confidences[x, :], :]
-
-    # Select only the first plane for every y_pred in B
-    for nidx in range(y_pred.shape[1]):
-        aa = y_pred[:, nidx, :].unsqueeze(1)
-
-        # Check if they match with any in y_true in B
-        matches = match_planes(aa, y_true, theta, eps)
-        # Applying any through each prediction
-        matches = matches.any(dim=1)
 
     y_pred = y_pred[:, 0, :].unsqueeze(1)
 
