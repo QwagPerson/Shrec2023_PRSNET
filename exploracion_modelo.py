@@ -95,13 +95,13 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
 
 if __name__ == "__main__":
     #  max_sde=0.023, angle_threshold=10, sde_fn="chamfer", phc_angle=1, phc_dist_percent=0.01
-    MODEL_PATH = "modelos_interesantes/version_31_tremendo_bs/checkpoints/epoch=11-step=636.ckpt"
+    MODEL_PATH = "modelos_interesantes/version_31_tremendo_bs/checkpoints/epoch=56-step=3021.ckpt"
     model = LightingPRSNet.load_from_checkpoint(MODEL_PATH,
-                                                max_sde=0.02, angle_threshold=30,
+                                                max_sde=0.023, angle_threshold=10,
                                                 phc_angle=1, phc_dist_percent=0.01)
     data_module = VoxelDataModule(
-        test_data_path="/data/voxel_dataset_v2",
-        predict_data_path="/data/voxel_dataset_v2",
+        test_data_path="/data/voxel_dataset_v3",
+        predict_data_path="/data/voxel_dataset_v3",
         train_val_split=1,
         batch_size=1,
         sample_size=2048,
@@ -111,10 +111,10 @@ if __name__ == "__main__":
 
     trainer.test(model, data_module)
 
-    #predictions_results = trainer.predict(model, data_module)
+    predictions_results = trainer.predict(model, data_module)
 
-    #for pred in predictions_results:
-        #visualize_prediction_results(pred, visualize_unscaled=False)
+    for pred in predictions_results:
+        visualize_prediction_results(pred, visualize_unscaled=False)
 
     """    for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=False)

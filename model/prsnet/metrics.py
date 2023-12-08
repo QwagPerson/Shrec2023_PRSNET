@@ -44,7 +44,6 @@ def match(y_pred, y_true, theta, eps):
     distances = torch.abs(torch.einsum('bnd,bnd->bn', points_pred, normals_true) + ds)  # B x N
     angles = get_angle(normals_pred, normals_true)  # B x N
 
-
     angles_match = (angles < theta) | (180 - angles < theta)
     distances_match = distances < eps
 
@@ -166,7 +165,7 @@ def get_phc(batch, y_pred: torch.Tensor, theta=1, eps_percent=0.01):
     :return: % of matches float 0..1
     """
     # Get eps
-    idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
+    idx, transformation_params, sample_points, _, _, y_true = batch
     y_pred = y_pred.detach().clone().to(y_true.device)
     eps = get_diagonals_length(sample_points) * eps_percent
 

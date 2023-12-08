@@ -1,6 +1,3 @@
-import argparse
-import os
-import polyscope as ps
 import numpy as np
 
 

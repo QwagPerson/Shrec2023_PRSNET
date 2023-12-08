@@ -70,7 +70,7 @@ class VoxelDataset(Dataset):
         voxel_grid_cp = torch.load(os.path.join(self.closets_point_voxel_grid_folder,
                                                 f"closest_point_voxel_grid_{idx}.pt"))
         if self.sample_size != -1:
-            p_idx = torch.randperm(self.sample_size) % points.shape[0]
+            p_idx = torch.randint(high=points.shape[0], size=(self.sample_size,))
             sample = points[p_idx]
         else:
             sample = points
