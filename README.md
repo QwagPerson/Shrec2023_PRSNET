@@ -17,3 +17,5 @@ exploracion_modelo.py allows us to explore the predictions of the model and comp
 ground truths.
 
 plot_results.ipynb it a notebook that creates some plots of the different results.
+
+In case of any questions my email is gsantelicesn2 (at) gmail (dot) com
