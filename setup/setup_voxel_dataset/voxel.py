@@ -144,6 +144,7 @@ class Voxel:
 
 
         ps.init()
+        ps.set_ground_plane_mode("none")
         ps.remove_all_structures()
         ps.register_point_cloud("Points", self.points)
         ps.register_surface_mesh("Voxelization", self.grid_points, self.grid_visualization_idx, smooth_shade=True)

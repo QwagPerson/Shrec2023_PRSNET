@@ -94,17 +94,19 @@ def visualize_prediction_results(prediction, visualize_unscaled=True):
 
 
 if __name__ == "__main__":
+    from setup.setup_voxel_dataset.voxel import Voxel
+
     #  max_sde=0.023, angle_threshold=10, sde_fn="chamfer", phc_angle=1, phc_dist_percent=0.01
     MODEL_PATH = "modelos_interesantes/version_31_tremendo_bs/checkpoints/epoch=56-step=3021.ckpt"
     model = LightingPRSNet.load_from_checkpoint(MODEL_PATH,
-                                                max_sde=0.023, angle_threshold=10,
-                                                phc_angle=1, phc_dist_percent=0.01)
+                                                max_sde=0.023, angle_threshold=1,
+                                                phc_angle=180, phc_dist_percent=0.01)
     data_module = VoxelDataModule(
         test_data_path="/data/voxel_dataset_v3",
         predict_data_path="/data/voxel_dataset_v3",
         train_val_split=1,
         batch_size=1,
-        sample_size=2048,
+        sample_size=1024,
         shuffle=False
     )
     trainer = Trainer(enable_progress_bar=True)
@@ -113,9 +115,22 @@ if __name__ == "__main__":
 
     predictions_results = trainer.predict(model, data_module)
 
-    for pred in predictions_results:
-        visualize_prediction_results(pred, visualize_unscaled=False)
+    prediction = [x.float() for x in predictions_results[0]]
+    fig_idx, y_out, sample_points_out, y_pred, sample_points, y_true, y_true_out = prediction
+
+    voxel_obj = Voxel(sample_points_out.squeeze(), y_out.squeeze()[:, 0:6], "local")
+
+    voxel_obj.visualize_grid()
+
+    voxel_obj = Voxel(sample_points.squeeze(), y_true.squeeze()[:, 0:6], "local")
+
+    voxel_obj.visualize_grid()
+
+
+    #for pred in predictions_results:
+    #   visualize_prediction_results(pred, visualize_unscaled=False)
 
     """    for pred in predictions_results:
         visualize_prediction_results(pred, visualize_unscaled=False)
-        break"""
+        brea
+    """
