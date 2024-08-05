@@ -1,6 +1,6 @@
 from lightning.pytorch.cli import LightningCLI
-from model.prsnet.lightning_prsnet import LightingPRSNet
-from dataset.lightning_voxel_dataset import VoxelDataModule
+from Shrec2023_PRSNET.src.model.prsnet import LightingPRSNet
+from Shrec2023_PRSNET.src.dataset import VoxelDataModule
 import torch
 
 
