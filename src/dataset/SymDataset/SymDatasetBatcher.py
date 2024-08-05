@@ -3,6 +3,7 @@ from typing import List
 import torch
 
 from src.dataset.SymDataset.SymDatasetItem import SymDatasetItem
+from src.utils.voxel import undo_voxel_transform
 
 
 class SymDatasetBatcher:
@@ -46,3 +47,17 @@ class SymDatasetBatcher:
 
     def get_voxel_obj(self):
         return [item.voxel_obj for item in self.item_list]
+
+    def get_voxel_grid_stacked(self):
+        res = self.item_list[0].res
+        return torch.stack([item.grid for item in self.get_voxel_obj()]).reshape((-1, 1, res, res, res)).to(self.device)
+
+    def get_voxel_points(self):
+        return torch.stack([item.points for item in self.get_voxel_obj()]).to(self.device)
+
+    def get_voxel_plane_syms(self):
+        return [item.symmetries_tensor.to(self.device) for item in self.get_voxel_obj()]
+
+    def get_y_pred_unscaled(self, y_pred):
+        return torch.stack([undo_voxel_transform(y_pred[i], self.item_list[i].voxel_obj)
+                            for i in range(len(self.item_list))])

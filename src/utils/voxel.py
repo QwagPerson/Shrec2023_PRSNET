@@ -6,6 +6,56 @@ import polyscope as ps
 from src.utils.plane import SymmetryPlane
 
 
+def undo_transform_representation(y_pred):
+    """
+
+    :param y_pred: B x N x 7
+    :return: B x N x 4
+    """
+    y_pred_transformed = torch.zeros((y_pred.shape[0], y_pred.shape[1], 4), device=y_pred.device)
+    # Copy normals
+    y_pred_transformed[:, :, 0:3] = y_pred[:, :, 0:3]
+    # Calculate offset
+    y_pred_transformed[:, :, 3] = - torch.einsum('bnd,bnd->bn', y_pred[:, :, 0:3], y_pred[:, :, 3:6])
+    return y_pred_transformed
+
+
+def transform_representation(y_pred):
+    """
+
+    :param y_pred: B x N x 4
+    :return: B x N x 7
+    """
+    y_pred_transformed = torch.zeros((y_pred.shape[0], y_pred.shape[1], 7), device=y_pred.device)
+    # Copy normals
+    y_pred_transformed[:, :, 0:3] = y_pred[:, :, 0:3]
+    # Choose the parameter (ABC) with the highest absolute value
+    bs = y_pred.shape[0]
+    n_heads = y_pred.shape[1]
+    for idx_bs in range(bs):
+        for idx_head in range(n_heads):
+            parameter_mag = torch.abs(y_pred[idx_bs, idx_head, 0:3])
+            max_idx = torch.argmax(parameter_mag)  # A B C
+            max_val = y_pred[idx_bs, idx_head, max_idx]
+            max_idx = max_idx + 3
+            y_pred_transformed[idx_bs, idx_head, max_idx] = - y_pred[idx_bs, idx_head, 3] / max_val
+    # Add confidence
+    y_pred_transformed[:, :, -1] = 1.0
+    return y_pred_transformed
+
+
+def undo_scale(points, min, norm):
+    points = points * norm
+    points = points + min
+    return points
+
+
+def undo_voxel_transform(y_pred, voxel_obj):
+    y_pred = transform_representation(y_pred.unsqueeze(0)).reshape(-1, 7)
+    y_pred[:, 3:6] = undo_scale(y_pred[:, 3:6], voxel_obj.min, voxel_obj.norm)
+    return y_pred
+
+
 # Computes the closest point on the point cloud to each grid center
 # Returns a tensor of shape ((1/voxel_size)**3,3)
 # The idea is to not compute this everytime as it is O((1/voxel_size)**3)

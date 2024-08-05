@@ -151,21 +151,22 @@ class SymLoss(nn.Module):
             batch,
             y_pred,
     ):
-        idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
 
-        batch_size = y_pred.shape[0]
+        device = batch.device
+        batch_size = batch.size
         amount_of_heads = y_pred.shape[1]
-        device = y_pred.device
 
         regularization_loss = planar_reflective_sym_reg_loss(y_pred).to(device)
 
         reflexion_loss = torch.tensor([0.0]).to(device)
         for batch_idx in range(batch_size):
             for current_head_idx in range(amount_of_heads):
+                item = batch.get_item(batch_idx)
+                voxel_obj = item.voxel_obj
                 curr_plane = y_pred[batch_idx, current_head_idx, :]
-                curr_sample = sample_points[batch_idx, :, :]
-                curr_voxel_grid = voxel_grids[batch_idx, 0, :, :, :]
-                curr_cp_voxel_grid = voxel_grids_cp[batch_idx, :, :, :, :]
+                curr_sample = voxel_obj.points
+                curr_voxel_grid = voxel_obj.grid
+                curr_cp_voxel_grid = voxel_obj.closest_point_grid
                 reflexion_loss += self.planar_reflective_sym_distance_loss(
                     curr_plane, curr_sample, curr_voxel_grid, curr_cp_voxel_grid
                 )
