@@ -1,8 +1,10 @@
+import os.path
 from copy import deepcopy
 from typing import Optional
 import torch
 from pathlib import Path
 import polyscope as ps
+import pickle
 
 from src.dataset.SymDataset.transforms.AbstractTransform import AbstractTransform
 from src.dataset.SymDataset.transforms.ReverseTransform import ReverseTransform
@@ -50,11 +52,19 @@ class SymDatasetItem:
         self.axis_continue_symmetries = axis_continue_symmetries
         self.axis_discrete_symmetries = axis_discrete_symmetries
 
-        self.voxel_obj = Voxel(
-            pcd=self.points,
-            sym_planes=self.plane_symmetries,
-            resolution=self.res
-        )
+        # Lazy implementation of caching the dataset voxels representation
+        voxel_path = str(self.filepath).replace(".xz", f"__res={self.res}.pkl")
+        if os.path.exists(voxel_path):
+            with open(voxel_path, "rb") as f:
+                self.voxel_obj = pickle.load(f)
+        else:
+            self.voxel_obj = Voxel(
+                pcd=self.points,
+                sym_planes=self.plane_symmetries,
+                resolution=self.res
+            )
+            with open(voxel_path, "wb") as f:
+                pickle.dump(self.voxel_obj, f)
 
     def get_item_elements(self):
         return (

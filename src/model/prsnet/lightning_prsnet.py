@@ -75,7 +75,7 @@ class LightingPRSNet(L.LightningModule):
                  angle_threshold: float = 30,
                  sde_fn: str = "symloss",
                  eps: float = 0.01,
-                 theta: float = 0.01,
+                 theta: float = 0.00015230484,
                  conf_threshold: float = 0.1,
                  ):
         super().__init__()
@@ -102,9 +102,11 @@ class LightingPRSNet(L.LightningModule):
         optimizer = torch.optim.Adam(self.parameters())
         return optimizer
 
-    def _log_step_metrics(self, stage, scale, map_, phc):
-        self.log(f"{stage}_{scale}_map", map_, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
-        self.log(f"{stage}_{scale}_map", phc, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+    def _log_step_metrics(self, stage, scale, batch_size, map_, phc):
+        self.log(f"{stage}_{scale}_map", map_,
+                 batch_size=batch_size, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log(f"{stage}_{scale}_map", phc,
+                 batch_size=batch_size,  on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
     def _register_metrics(self, stage, batch, y_pred):
         in_voxel_pred = [(batch.get_voxel_points(), transform_representation(y_pred), batch.get_voxel_plane_syms())]
@@ -115,8 +117,8 @@ class LightingPRSNet(L.LightningModule):
         out_map, out_phc, _ = calculate_metrics_from_predictions(out_voxel_pred, get_match_sequence_plane_symmetry,
                                                                  self.pdict)
 
-        self._log_step_metrics(stage, "in", in_map, in_phc)
-        self._log_step_metrics(stage, "out", out_map, out_phc)
+        self._log_step_metrics(stage, "in", batch.size, in_map, in_phc)
+        self._log_step_metrics(stage, "out", batch.size, out_map, out_phc)
 
         return in_map, in_phc, out_map, out_phc
 
@@ -125,7 +127,8 @@ class LightingPRSNet(L.LightningModule):
         loss = self.loss_fn.forward(batch, y_pred)
 
         metrics = self._register_metrics(stage, batch, y_pred)
-        self.log(f"{stage}_loss", loss, on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
+        self.log(f"{stage}_loss", loss, batch_size=batch.size,
+                 on_step=False, on_epoch=True, prog_bar=True, sync_dist=True)
 
         return loss, metrics
 

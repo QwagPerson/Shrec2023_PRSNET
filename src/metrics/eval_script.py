@@ -245,7 +245,7 @@ if __name__ == "__main__":
     ]
     pdict = {
         "eps": 0.01,
-        "theta": 0.01,
+        "theta": 0.00015230484,
         "confidence_threshold": 0.1,
         "rot_angle_threshold": 0.01,
     }

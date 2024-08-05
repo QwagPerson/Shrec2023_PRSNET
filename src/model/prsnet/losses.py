@@ -79,17 +79,16 @@ class ChamferLoss(nn.Module):
             batch,
             y_pred,
     ):
-        idx, transformation_params, sample_points, voxel_grids, voxel_grids_cp, y_true = batch
-
-        batch_size = y_pred.shape[0]
+        batch_size = batch.size
+        device = batch.device
         amount_of_heads = y_pred.shape[1]
-        device = y_pred.device
 
         # First regularization loss
         regularization_loss = planar_reflective_sym_reg_loss(y_pred).to(device)
 
         reflexion_loss = torch.tensor([0.0]).to(device)
         for current_head_idx in range(amount_of_heads):
+            sample_points = batch.get_points()
             predicted_planes_by_head = y_pred[:, current_head_idx, :]
             reflected_points = batch_apply_symmetry(sample_points, predicted_planes_by_head)
             reflexion_loss += self.distance.forward(

@@ -1,12 +1,12 @@
 from lightning.pytorch.cli import LightningCLI
-from Shrec2023_PRSNET.src.model.prsnet import LightingPRSNet
-from Shrec2023_PRSNET.src.dataset import VoxelDataModule
+from src.model.prsnet.lightning_prsnet import LightingPRSNet
+from src.dataset.SymDataset.SymDataModule import SymDataModule
 import torch
 
 
 def cli_main():
     torch.set_float32_matmul_precision('high')
-    cli = LightningCLI(LightingPRSNet, VoxelDataModule)
+    cli = LightningCLI(LightingPRSNet, SymDataModule)
 
 
 if __name__ == "__main__":

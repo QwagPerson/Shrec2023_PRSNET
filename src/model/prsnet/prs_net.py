@@ -56,5 +56,6 @@ class PRSNet(nn.Module):
         x = self.encoder(x)
         results = []
         for head in self.heads:
-            results.append(head(x))
+            r = head(x)
+            results.append(r)
         return torch.stack(results, dim=1)
